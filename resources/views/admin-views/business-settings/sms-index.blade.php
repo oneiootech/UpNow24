@@ -168,16 +168,14 @@
                                         <i class="tio-launch"></i> {{ translate('Open dashboard') }}
                                     </a>
                                 @endif
-                                <div class="d-flex align-items-center" style="gap: 8px;">
-                                    <button type="button" class="btn btn-outline-primary btn-test-sms"
-                                            data-gateway="{{ $gateway->key_name }}"
-                                            data-title="{{ $meta['label'] }}">
-                                        <i class="tio-send"></i> {{ translate('Test') }}
-                                    </button>
-                                    <button type="submit" class="btn btn--primary demo_check">
-                                        <i class="tio-save"></i> {{ translate('Update') }}
-                                    </button>
-                                </div>
+                                <button type="button" class="btn btn-outline-info btn-test-sms"
+                                        data-gateway="{{ $gateway->key_name }}"
+                                        data-title="{{ $meta['label'] }}">
+                                    <i class="tio-send"></i> {{ translate('Test') }}
+                                </button>
+                                <button type="submit" class="btn btn--primary demo_check">
+                                    <i class="tio-save"></i> {{ translate('Update') }}
+                                </button>
                             </div>
                         </div>
                     </form>
