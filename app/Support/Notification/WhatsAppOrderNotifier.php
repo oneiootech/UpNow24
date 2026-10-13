@@ -8,6 +8,35 @@ use Illuminate\Support\Facades\Log;
 class WhatsAppOrderNotifier
 {
     /**
+     * Build clean readable item details list (e.g. "Mango (₹99)\nMojito (₹49)").
+     */
+    public static function formatItemDetails($order): string
+    {
+        try {
+            if (!$order->relationLoaded('details')) {
+                $order->loadMissing('details');
+            }
+            $lines = [];
+            if ($order->details) {
+                foreach ($order->details as $d) {
+                    $name = null;
+                    if (!empty($d->item_details)) {
+                        $decoded = is_array($d->item_details) ? $d->item_details : json_decode((string)$d->item_details, true);
+                        $name = $decoded['name'] ?? null;
+                    }
+                    $name = $name ?? $d->item?->name ?? 'Item';
+                    $qty = (int)($d->quantity ?? 1);
+                    $price = number_format((float)($d->price ?? 0), 0);
+                    $lines[] = $qty > 1 ? "• {$name} x{$qty} (₹{$price})" : "• {$name} (₹{$price})";
+                }
+            }
+            return !empty($lines) ? implode("\n", $lines) : 'Items included in order';
+        } catch (\Throwable $e) {
+            return 'Items included in order';
+        }
+    }
+
+    /**
      * Send WhatsApp alert to the store/seller when a new order is received.
      */
     public static function notifySellerNewOrder($order): bool
@@ -20,14 +49,14 @@ class WhatsAppOrderNotifier
         $orderId = (string)($order->id ?? '');
         $storeName = (string)($order->store?->name ?? 'Your Store');
         $amount = (string)number_format((float)($order->order_amount ?? 0), 2);
-        $paymentMethod = ucwords(str_replace('_', ' ', (string)($order->payment_method ?? 'Cash On Delivery')));
+        $itemDetails = self::formatItemDetails($order);
 
-        $message = "📦 *New Order Received!*\n\n"
-            . "• *Order ID:* #{$orderId}\n"
+        $message = "📦 *New Order Alert!*\n\n"
+            . "• *Order ID:* #{$orderId}\n\n"
+            . "*Item details:*\n{$itemDetails}\n\n"
             . "• *Store:* {$storeName}\n"
-            . "• *Amount:* ₹{$amount}\n"
-            . "• *Payment:* {$paymentMethod}\n\n"
-            . "Please open your UpNow24 Seller panel to accept and prepare the order.";
+            . "• *Amount:* ₹{$amount}\n\n"
+            . "Please open your UpNow24 Seller panel to prepare the order.";
 
         $setting = Setting::where('settings_type', 'sms_config')->where('key_name', 'custom_otp')->first();
         $template = $setting?->live_values['seller_order_template'] ?? 'seller_order_alert';
@@ -38,15 +67,15 @@ class WhatsAppOrderNotifier
             'order_id'  => $orderId,
             'variables' => [
                 '1' => $orderId,
-                '2' => $storeName,
-                '3' => $amount,
-                '4' => $paymentMethod,
+                '2' => $itemDetails,
+                '3' => $storeName,
+                '4' => $amount,
             ],
         ]);
     }
 
     /**
-     * Send WhatsApp alert to the customer when order status changes.
+     * Send WhatsApp alert to the customer when order is confirmed / updated.
      */
     public static function notifyCustomerOrderStatus($order, string $status): bool
     {
@@ -68,28 +97,19 @@ class WhatsAppOrderNotifier
 
         $orderId = (string)($order->id ?? '');
         $storeName = (string)($order->store?->name ?? 'Store');
-        $amount = (string)number_format((float)($order->order_amount ?? 0), 2);
+        $paymentMethod = ucwords(str_replace('_', ' ', (string)($order->payment_method ?? 'Cash On Delivery')));
+        $orderType = ucwords(str_replace('_', ' ', (string)($order->order_type ?? 'Delivery')));
+        $paymentStatus = ucwords(str_replace('_', ' ', (string)($order->payment_status ?? 'Unpaid')));
+        $itemDetails = self::formatItemDetails($order);
 
-        $statusText = match ($status) {
-            'pending', 'confirmed' => "Your order #{$orderId} from {$storeName} has been confirmed!",
-            'processing'           => "Great news! {$storeName} is now preparing your order #{$orderId}.",
-            'handover', 'picked_up' => "Your order #{$orderId} has been picked up and is on its way to you!",
-            'delivered'            => "Your order #{$orderId} has been delivered. Thank you for choosing UpNow24!",
-            'canceled'             => "Your order #{$orderId} from {$storeName} has been canceled.",
-            default                => null,
-        };
-
-        if ($statusText === null) {
-            return false;
-        }
-
-        $message = "🛍️ *Order Update - UpNow24*\n\n"
-            . "Hi {$customerName},\n"
-            . "{$statusText}\n\n"
-            . "• *Order ID:* #{$orderId}\n"
-            . "• *Amount:* ₹{$amount}\n"
-            . "• *Store:* {$storeName}\n\n"
-            . "Track your order live in the UpNow24 App.";
+        $message = "🛍️ *Order Confirmed - UpNow24*\n\n"
+            . "• *Order:* #{$orderId}\n"
+            . "• *Payment method:* {$paymentMethod}\n"
+            . "• *Order Type:* {$orderType}\n"
+            . "• *Payment status:* {$paymentStatus}\n\n"
+            . "*Item details:*\n{$itemDetails}\n\n"
+            . "• *Store information:* {$storeName}\n\n"
+            . "✅ *Order Is Confirmed Deliverd Soon*";
 
         $setting = Setting::where('settings_type', 'sms_config')->where('key_name', 'custom_otp')->first();
         $template = $setting?->live_values['customer_order_template'] ?? 'customer_order_alert';
@@ -100,10 +120,12 @@ class WhatsAppOrderNotifier
             'order_id'  => $orderId,
             'status'    => $status,
             'variables' => [
-                '1' => $customerName,
-                '2' => $orderId,
-                '3' => $storeName,
-                '4' => $amount,
+                '1' => $orderId,
+                '2' => $paymentMethod,
+                '3' => $orderType,
+                '4' => $paymentStatus,
+                '5' => $itemDetails,
+                '6' => $storeName,
             ],
         ]);
     }
