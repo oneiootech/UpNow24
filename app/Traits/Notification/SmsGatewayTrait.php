@@ -60,7 +60,7 @@ trait SmsGatewayTrait
             if ($testType === 'seller_order') {
                 $template = $config['seller_order_template'] ?? 'seller_order_alert';
                 $orderId = (string)rand(100100, 100999);
-                $itemDetails = "• Mango (₹99)\n• Mojito (₹49)";
+                $itemDetails = "Mango (₹99), Mojito (₹49)";
                 $storeName = 'Example Store';
                 $amount = '148.00';
                 $message = "📦 *New Order Alert!*\n\n"
@@ -87,7 +87,7 @@ trait SmsGatewayTrait
             } elseif ($testType === 'customer_order') {
                 $template = $config['customer_order_template'] ?? 'customer_order_alert';
                 $orderId = (string)rand(100100, 100999);
-                $itemDetails = "• Mango (₹99)\n• Mojito (₹49)";
+                $itemDetails = "Mango (₹99), Mojito (₹49)";
                 $storeName = 'Example Store';
                 $paymentMethod = 'Cash On Delivery';
                 $orderType = 'Delivery';

@@ -27,10 +27,10 @@ class WhatsAppOrderNotifier
                     $name = $name ?? $d->item?->name ?? 'Item';
                     $qty = (int)($d->quantity ?? 1);
                     $price = number_format((float)($d->price ?? 0), 0);
-                    $lines[] = $qty > 1 ? "• {$name} x{$qty} (₹{$price})" : "• {$name} (₹{$price})";
+                    $lines[] = $qty > 1 ? "{$name} x{$qty} (₹{$price})" : "{$name} (₹{$price})";
                 }
             }
-            return !empty($lines) ? implode("\n", $lines) : 'Items included in order';
+            return !empty($lines) ? implode(", ", $lines) : 'Items included in order';
         } catch (\Throwable $e) {
             return 'Items included in order';
         }
