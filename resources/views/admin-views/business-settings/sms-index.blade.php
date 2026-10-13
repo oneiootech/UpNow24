@@ -4,6 +4,26 @@
 
 @push('css_or_js')
     <link rel="stylesheet" href="{{ asset('public/assets/admin/css/third-party-setup.css') }}">
+    <style>
+        #toast-container > div {
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+            white-space: normal !important;
+            max-width: 400px !important;
+            width: auto !important;
+            line-height: 1.4 !important;
+        }
+        .test-sms-result {
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            border-radius: 8px;
+        }
+        .test-sms-result code {
+            word-break: break-all;
+            white-space: normal;
+            font-size: 11px;
+        }
+    </style>
 @endpush
 
 @section('content')
@@ -310,20 +330,37 @@
                 },
                 success: function (res) {
                     if (res && res.success) {
-                        const successText = res.message || '{{ translate("Test OTP dispatched successfully!") }}';
-                        $alert.removeClass('d-none alert-danger')
-                              .addClass('alert alert-success d-flex align-items-center')
-                              .html('<i class="tio-checkmark-circle-outlined fz-18 mr-2"></i><div><strong>{{ translate("Success") }}:</strong> ' + successText + '</div>');
+                        const successTitle = res.message || '{{ translate("Test OTP dispatched successfully!") }}';
+                        let html = '<div class="test-sms-result alert alert-soft-success p-3 mb-0">';
+                        html += '<div class="d-flex align-items-center mb-1 text-success font-weight-bold">';
+                        html += '<i class="tio-checkmark-circle-outlined fz-18 mr-2"></i>';
+                        html += '<span>' + successTitle + '</span>';
+                        html += '</div>';
+                        if (res.otp) {
+                            html += '<div class="mt-2 small text-dark"><strong>{{ translate("Sent OTP Code") }}:</strong> <span class="badge badge-success px-2 py-1 ml-1 fz-12">' + res.otp + '</span></div>';
+                        }
+                        if (res.provider_message_id) {
+                            html += '<div class="mt-2 small text-muted"><strong>{{ translate("Provider Message ID") }}:</strong><code class="d-block mt-1 p-2 bg-white border rounded text-dark font-mono">' + res.provider_message_id + '</code></div>';
+                        }
+                        html += '</div>';
+
+                        $alert.removeClass('d-none').html(html);
                         if (typeof toastr !== 'undefined') {
-                            toastr.success(successText);
+                            toastr.success(successTitle);
                         }
                     } else {
                         const errText = (res && res.message) ? res.message : '{{ translate("Failed to send OTP.") }}';
-                        $alert.removeClass('d-none alert-success')
-                              .addClass('alert alert-danger d-flex align-items-center')
-                              .html('<i class="tio-error-outlined fz-18 mr-2"></i><div><strong>{{ translate("Error") }}:</strong> ' + errText + '</div>');
+                        let errHtml = '<div class="test-sms-result alert alert-soft-danger p-3 mb-0">';
+                        errHtml += '<div class="d-flex align-items-center mb-1 text-danger font-weight-bold">';
+                        errHtml += '<i class="tio-error-outlined fz-18 mr-2"></i>';
+                        errHtml += '<span>{{ translate("Failed to dispatch OTP") }}</span>';
+                        errHtml += '</div>';
+                        errHtml += '<div class="small text-danger mt-1">' + errText + '</div>';
+                        errHtml += '</div>';
+
+                        $alert.removeClass('d-none').html(errHtml);
                         if (typeof toastr !== 'undefined') {
-                            toastr.error(errText);
+                            toastr.error('{{ translate("Failed to send test OTP") }}');
                         }
                     }
                 },
@@ -332,9 +369,15 @@
                     if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMsg = xhr.responseJSON.message;
                     }
-                    $alert.removeClass('d-none alert-success')
-                          .addClass('alert alert-danger d-flex align-items-center')
-                          .html('<i class="tio-error-outlined fz-18 mr-2"></i><div><strong>{{ translate("Error") }}:</strong> ' + errorMsg + '</div>');
+                    let errHtml = '<div class="test-sms-result alert alert-soft-danger p-3 mb-0">';
+                    errHtml += '<div class="d-flex align-items-center mb-1 text-danger font-weight-bold">';
+                    errHtml += '<i class="tio-error-outlined fz-18 mr-2"></i>';
+                    errHtml += '<span>{{ translate("Error") }}</span>';
+                    errHtml += '</div>';
+                    errHtml += '<div class="small text-danger mt-1">' + errorMsg + '</div>';
+                    errHtml += '</div>';
+
+                    $alert.removeClass('d-none').html(errHtml);
                     if (typeof toastr !== 'undefined') {
                         toastr.error(errorMsg);
                     }

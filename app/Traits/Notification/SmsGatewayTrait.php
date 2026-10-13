@@ -98,13 +98,10 @@ trait SmsGatewayTrait
 
                 $json = json_decode((string)$result, true);
                 if ($httpCode >= 200 && $httpCode < 300 && (isset($json['status']) && $json['status'] === 'success')) {
-                    $msg = $json['message'] ?? 'OTP dispatched successfully via WhatsApp';
-                    if (!empty($json['provider_message_id'])) {
-                        $msg .= ' (Message ID: ' . $json['provider_message_id'] . ')';
-                    }
                     return [
                         'success' => true,
-                        'message' => $msg,
+                        'message' => 'OTP dispatched successfully via WhatsApp!',
+                        'provider_message_id' => $json['provider_message_id'] ?? null,
                         'otp' => $otp,
                     ];
                 }
