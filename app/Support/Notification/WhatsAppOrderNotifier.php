@@ -29,7 +29,11 @@ class WhatsAppOrderNotifier
             . "• *Payment:* {$paymentMethod}\n\n"
             . "Please open your UpNow24 Seller panel to accept and prepare the order.";
 
+        $setting = Setting::where('settings_type', 'sms_config')->where('key_name', 'custom_otp')->first();
+        $template = $setting?->live_values['seller_order_template'] ?? 'seller_order_alert';
+
         return self::dispatchWhatsApp($sellerPhone, $message, [
+            'template'  => $template,
             'event'     => 'SELLER_NEW_ORDER',
             'order_id'  => $orderId,
             'variables' => [
@@ -87,7 +91,11 @@ class WhatsAppOrderNotifier
             . "• *Store:* {$storeName}\n\n"
             . "Track your order live in the UpNow24 App.";
 
+        $setting = Setting::where('settings_type', 'sms_config')->where('key_name', 'custom_otp')->first();
+        $template = $setting?->live_values['customer_order_template'] ?? 'customer_order_alert';
+
         return self::dispatchWhatsApp($customerPhone, $message, [
+            'template'  => $template,
             'event'     => 'CUSTOMER_ORDER_' . strtoupper($status),
             'order_id'  => $orderId,
             'status'    => $status,
