@@ -168,18 +168,185 @@
                                         <i class="tio-launch"></i> {{ translate('Open dashboard') }}
                                     </a>
                                 @endif
-                                <button type="submit" class="btn btn--primary demo_check">
-                                    <i class="tio-save"></i> {{ translate('Update') }}
-                                </button>
+                                <div class="d-flex align-items-center" style="gap: 8px;">
+                                    <button type="button" class="btn btn-outline-primary btn-test-sms"
+                                            data-gateway="{{ $gateway->key_name }}"
+                                            data-title="{{ $meta['label'] }}">
+                                        <i class="tio-send"></i> {{ translate('Test') }}
+                                    </button>
+                                    <button type="submit" class="btn btn--primary demo_check">
+                                        <i class="tio-save"></i> {{ translate('Update') }}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </form>
                 </div>
             @endforeach
         </div>
+
+        {{-- Test SMS Modal --}}
+        <div class="modal fade" id="testSmsModal" tabindex="-1" role="dialog" aria-labelledby="testSmsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title d-flex align-items-center" id="testSmsModalLabel" style="gap: 8px;">
+                            <i class="tio-chat-outlined text-primary fz-20"></i>
+                            <span>{{ translate('Test SMS / WhatsApp Gateway') }}</span>
+                        </h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <form id="testSmsForm">
+                        @csrf
+                        <div class="modal-body">
+                            <input type="hidden" name="gateway" id="testGatewayInput">
+
+                            <div class="mb-3">
+                                <label class="form-label text-capitalize font-weight-bold">
+                                    {{ translate('Gateway') }}
+                                </label>
+                                <div class="alert alert-soft-primary py-2 px-3 mb-0 d-flex align-items-center justify-content-between">
+                                    <span id="testGatewayTitle" class="font-weight-bold"></span>
+                                    <span class="badge badge-primary text-uppercase" id="testGatewayBadge"></span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="testReceiverPhone" class="form-label font-weight-bold">
+                                    {{ translate('Recipient Mobile Number') }} <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="testReceiverPhone" name="receiver"
+                                       placeholder="{{ translate('e.g. 919876543210 or 9876543210') }}" required autocomplete="tel">
+                                <small class="form-text text-muted">
+                                    <i class="tio-info-outined"></i>
+                                    {{ translate('Enter mobile number with country code (e.g. 91XXXXXXXXXX). Note: WhatsApp Cloud API cannot deliver to the business sender number itself.') }}
+                                </small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="testOtpCode" class="form-label font-weight-bold">
+                                    {{ translate('Test OTP Code') }} <small class="text-muted">({{ translate('Optional') }})</small>
+                                </label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="testOtpCode" name="otp"
+                                           placeholder="123456" maxlength="8">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" id="btnGenOtp" title="{{ translate('Generate random OTP') }}">
+                                            <i class="tio-refresh"></i> {{ translate('Generate') }}
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted">
+                                    {{ translate('Leave blank to use a randomly generated 6-digit OTP.') }}
+                                </small>
+                            </div>
+
+                            <div id="testSmsAlert" class="d-none"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                                {{ translate('Close') }}
+                            </button>
+                            <button type="submit" class="btn btn--primary" id="btnSendTestSms">
+                                <span class="spinner-border spinner-border-sm d-none mr-1" id="testSmsSpinner" role="status" aria-hidden="true"></span>
+                                <i class="tio-send mr-1" id="testSmsIcon"></i>
+                                <span>{{ translate('Send Test OTP') }}</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 @endsection
 
 @push('script_2')
     @include('admin-views.business-settings.partials.third-party-scripts')
+    <script>
+        $(document).on('click', '.btn-test-sms', function () {
+            const gateway = $(this).data('gateway');
+            const title = $(this).data('title');
+
+            $('#testGatewayInput').val(gateway);
+            $('#testGatewayTitle').text(title);
+            $('#testGatewayBadge').text(gateway);
+            $('#testOtpCode').val(Math.floor(100000 + Math.random() * 900000));
+            $('#testSmsAlert').addClass('d-none').html('');
+            $('#testReceiverPhone').val('');
+            $('#testSmsModal').modal('show');
+        });
+
+        $('#btnGenOtp').on('click', function () {
+            $('#testOtpCode').val(Math.floor(100000 + Math.random() * 900000));
+        });
+
+        $('#testSmsForm').on('submit', function (e) {
+            e.preventDefault();
+
+            const receiver = $('#testReceiverPhone').val().trim();
+            if (!receiver) {
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('{{ translate("Please enter recipient mobile number") }}');
+                }
+                return;
+            }
+
+            const $btn = $('#btnSendTestSms');
+            const $spinner = $('#testSmsSpinner');
+            const $icon = $('#testSmsIcon');
+            const $alert = $('#testSmsAlert');
+
+            $btn.prop('disabled', true);
+            $spinner.removeClass('d-none');
+            $icon.addClass('d-none');
+            $alert.addClass('d-none').html('');
+
+            $.ajax({
+                url: '{{ route("admin.business-settings.third-party.sms-test") }}',
+                method: 'POST',
+                data: $(this).serialize(),
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function (res) {
+                    if (res && res.success) {
+                        const successText = res.message || '{{ translate("Test OTP dispatched successfully!") }}';
+                        $alert.removeClass('d-none alert-danger')
+                              .addClass('alert alert-success d-flex align-items-center')
+                              .html('<i class="tio-checkmark-circle-outlined fz-18 mr-2"></i><div><strong>{{ translate("Success") }}:</strong> ' + successText + '</div>');
+                        if (typeof toastr !== 'undefined') {
+                            toastr.success(successText);
+                        }
+                    } else {
+                        const errText = (res && res.message) ? res.message : '{{ translate("Failed to send OTP.") }}';
+                        $alert.removeClass('d-none alert-success')
+                              .addClass('alert alert-danger d-flex align-items-center')
+                              .html('<i class="tio-error-outlined fz-18 mr-2"></i><div><strong>{{ translate("Error") }}:</strong> ' + errText + '</div>');
+                        if (typeof toastr !== 'undefined') {
+                            toastr.error(errText);
+                        }
+                    }
+                },
+                error: function (xhr) {
+                    let errorMsg = '{{ translate("Something went wrong while dispatching test OTP.") }}';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    $alert.removeClass('d-none alert-success')
+                          .addClass('alert alert-danger d-flex align-items-center')
+                          .html('<i class="tio-error-outlined fz-18 mr-2"></i><div><strong>{{ translate("Error") }}:</strong> ' + errorMsg + '</div>');
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error(errorMsg);
+                    }
+                },
+                complete: function () {
+                    $btn.prop('disabled', false);
+                    $spinner.addClass('d-none');
+                    $icon.removeClass('d-none');
+                }
+            });
+        });
+    </script>
 @endpush

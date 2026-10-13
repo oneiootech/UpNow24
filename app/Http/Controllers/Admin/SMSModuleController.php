@@ -142,4 +142,20 @@ class SMSModuleController extends Controller
     }
         return back();
     }
+
+    public function sms_test(Request $request)
+    {
+        $request->validate([
+            'gateway' => 'required|string',
+            'receiver' => 'required|string',
+        ]);
+
+        $gateway = $request->input('gateway');
+        $receiver = trim($request->input('receiver'));
+        $otp = $request->input('otp') ? trim($request->input('otp')) : (string)rand(100000, 999999);
+
+        $result = \App\Support\Notification\Sms::testGateway($gateway, $receiver, $otp);
+
+        return response()->json($result);
+    }
 }

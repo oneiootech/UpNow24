@@ -16,13 +16,16 @@ use App\Library\Payment as PaymentInfo;
 class PaymentController extends Controller
 {
     public function __construct(){
-        if (is_dir('App\Traits') && trait_exists('App\Traits\Payment\PaymentTrait')) {
+        if (!class_exists('ExtendedPaymentController') && is_dir('App\Traits') && trait_exists('App\Traits\Payment\PaymentTrait')) {
             $this->extendWithPaymentGatewayTrait();
         }
     }
 
     private function extendWithPaymentGatewayTrait()
     {
+        if (class_exists('ExtendedPaymentController')) {
+            return;
+        }
         $extendedControllerClass = $this->generateExtendedControllerClass();
         eval($extendedControllerClass);
     }
@@ -33,7 +36,7 @@ class PaymentController extends Controller
         $traitClassName = 'App\Traits\Payment\PaymentTrait';
 
         $extendedControllerClass = "
-            class ExtendedController extends $baseControllerClass {
+            class ExtendedPaymentController extends $baseControllerClass {
                 use $traitClassName;
             }
         ";

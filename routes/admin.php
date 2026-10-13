@@ -735,6 +735,7 @@ Route::name('admin.')->controller(ZoneController::class)->group(function () {
                     Route::controller(SMSModuleController::class)->group(function () {
                         Route::get('sms-module', 'sms_index')->name('sms-module');
                         Route::post('sms-module-update/{sms_module}', 'sms_update')->name('sms-module-update');
+                        Route::post('sms-test', 'sms_test')->name('sms-test');
                     });
                     Route::get('payment-method', 'payment_index')->name('payment-method');
 

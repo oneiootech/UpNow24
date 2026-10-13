@@ -24,6 +24,115 @@ trait SmsGatewayTrait
         };
     }
 
+    public static function testGateway(string $gateway, string $receiver, ?string $otp = null): array
+    {
+        $receiver = trim((string)$receiver);
+        $otp = $otp ?: (string)rand(100000, 999999);
+
+        if ($gateway === 'custom_otp') {
+            $config = self::smsGatewaySettings('custom_otp');
+            if (!$config) {
+                return [
+                    'success' => false,
+                    'message' => 'Custom WhatsApp gateway is not configured.',
+                ];
+            }
+
+            $apiUrl = $config['api_url'] ?? 'https://wpcrm.furtikart.com/api/v1/gateway/otp';
+            $token = trim($config['token'] ?? $config['api_key'] ?? '');
+            $template = $config['otp_template'] ?? 'Your verification code is #OTP#';
+            $message = str_replace("#OTP#", $otp, $template);
+
+            if (empty($token)) {
+                return [
+                    'success' => false,
+                    'message' => 'API Token / Bearer key is empty. Please enter your API token.',
+                ];
+            }
+
+            $cleanDigits = preg_replace('/\D+/', '', $receiver);
+            if ($cleanDigits === '918982049143' || $cleanDigits === '8982049143') {
+                return [
+                    'success' => false,
+                    'message' => 'WhatsApp Cloud API limitation: You cannot send a test message to the registered sender number itself (+91 89820 49143). Please enter another mobile number.',
+                ];
+            }
+
+            $payload = [
+                'mobile' => $receiver,
+                'otp' => (string)$otp,
+                'message' => $message,
+            ];
+
+            $headers = [
+                'Content-Type: application/json',
+                'Accept: application/json',
+                'Authorization: ' . (str_starts_with($token, 'Bearer ') ? $token : 'Bearer ' . $token),
+            ];
+
+            try {
+                $curl = curl_init();
+                curl_setopt_array($curl, [
+                    CURLOPT_URL => $apiUrl,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_CUSTOMREQUEST => 'POST',
+                    CURLOPT_POSTFIELDS => json_encode($payload),
+                    CURLOPT_HTTPHEADER => $headers,
+                    CURLOPT_CONNECTTIMEOUT => self::smsConnectTimeout(),
+                    CURLOPT_TIMEOUT => self::smsTimeout(),
+                    CURLOPT_SSL_VERIFYPEER => config('notification.sms.verify_ssl', !app()->isLocal()),
+                    CURLOPT_SSL_VERIFYHOST => config('notification.sms.verify_ssl', !app()->isLocal()) ? 2 : 0,
+                ]);
+
+                $result = curl_exec($curl);
+                $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+                $curlErr = curl_error($curl);
+                curl_close($curl);
+
+                if ($curlErr) {
+                    return [
+                        'success' => false,
+                        'message' => 'Curl error: ' . $curlErr,
+                    ];
+                }
+
+                $json = json_decode((string)$result, true);
+                if ($httpCode >= 200 && $httpCode < 300 && (isset($json['status']) && $json['status'] === 'success')) {
+                    $msg = $json['message'] ?? 'OTP dispatched successfully via WhatsApp';
+                    if (!empty($json['provider_message_id'])) {
+                        $msg .= ' (Message ID: ' . $json['provider_message_id'] . ')';
+                    }
+                    return [
+                        'success' => true,
+                        'message' => $msg,
+                        'otp' => $otp,
+                    ];
+                }
+
+                $errMsg = $json['message'] ?? $result ?? ('HTTP code ' . $httpCode);
+                return [
+                    'success' => false,
+                    'message' => (string)$errMsg,
+                ];
+            } catch (\Throwable $e) {
+                return [
+                    'success' => false,
+                    'message' => 'Exception: ' . $e->getMessage(),
+                ];
+            }
+        }
+
+        // Fallback for other gateways
+        $status = self::send($receiver, $otp);
+        return [
+            'success' => $status === 'success',
+            'message' => $status === 'success'
+                ? "Test OTP {$otp} sent successfully via {$gateway}!"
+                : "Gateway {$gateway} returned status: {$status}",
+            'otp' => $otp,
+        ];
+    }
+
     public static function customOtp($receiver, $otp, $message = null): string
     {
         $config = self::smsGatewaySettings('custom_otp');
