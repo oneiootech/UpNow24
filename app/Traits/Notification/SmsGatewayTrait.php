@@ -24,7 +24,7 @@ trait SmsGatewayTrait
         };
     }
 
-    public static function testGateway(string $gateway, string $receiver, ?string $otp = null): array
+    public static function testGateway(string $gateway, string $receiver, ?string $otp = null, string $testType = 'otp'): array
     {
         $receiver = trim((string)$receiver);
         $otp = $otp ?: (string)rand(100000, 999999);
@@ -40,8 +40,6 @@ trait SmsGatewayTrait
 
             $apiUrl = $config['api_url'] ?? 'https://wpcrm.furtikart.com/api/v1/gateway/otp';
             $token = trim($config['token'] ?? $config['api_key'] ?? '');
-            $template = $config['otp_template'] ?? 'Your verification code is #OTP#';
-            $message = str_replace("#OTP#", $otp, $template);
 
             if (empty($token)) {
                 return [
@@ -58,11 +56,77 @@ trait SmsGatewayTrait
                 ];
             }
 
-            $payload = [
-                'mobile' => $receiver,
-                'otp' => (string)$otp,
-                'message' => $message,
-            ];
+            $template = 'otp';
+            if ($testType === 'seller_order') {
+                $template = $config['seller_order_template'] ?? 'seller_order_alert';
+                $orderId = (string)rand(100100, 100999);
+                $itemDetails = "• Mango (₹99)\n• Mojito (₹49)";
+                $storeName = 'Example Store';
+                $amount = '148.00';
+                $message = "📦 *New Order Alert!*\n\n"
+                    . "Order ID: #{$orderId}\n\n"
+                    . "*Item details:*\n{$itemDetails}\n\n"
+                    . "Store: {$storeName}\n"
+                    . "Amount: ₹{$amount}\n\n"
+                    . "Please open your UpNow24 App to *Accept & prepare* the order.";
+
+                $payload = [
+                    'mobile'    => $receiver,
+                    'phone'     => $receiver,
+                    'template'  => $template,
+                    'event'     => 'SELLER_NEW_ORDER',
+                    'order_id'  => $orderId,
+                    'variables' => [
+                        '1' => $orderId,
+                        '2' => $itemDetails,
+                        '3' => $storeName,
+                        '4' => $amount,
+                    ],
+                    'message'   => $message,
+                ];
+            } elseif ($testType === 'customer_order') {
+                $template = $config['customer_order_template'] ?? 'customer_order_alert';
+                $orderId = (string)rand(100100, 100999);
+                $itemDetails = "• Mango (₹99)\n• Mojito (₹49)";
+                $storeName = 'Example Store';
+                $paymentMethod = 'Cash On Delivery';
+                $orderType = 'Delivery';
+                $paymentStatus = 'Unpaid';
+                $message = "🛍️ *Order Confirmed - UpNow24*\n\n"
+                    . "• *Order:* #{$orderId}\n"
+                    . "• *Payment method:* {$paymentMethod}\n"
+                    . "• *Order Type:* {$orderType}\n"
+                    . "• *Payment status:* {$paymentStatus}\n\n"
+                    . "*Item details:*\n{$itemDetails}\n\n"
+                    . "• *Store information:* {$storeName}\n\n"
+                    . "✅ *Order Is Confirmed Deliverd Soon*";
+
+                $payload = [
+                    'mobile'    => $receiver,
+                    'phone'     => $receiver,
+                    'template'  => $template,
+                    'event'     => 'CUSTOMER_ORDER_CONFIRMED',
+                    'order_id'  => $orderId,
+                    'status'    => 'confirmed',
+                    'variables' => [
+                        '1' => $orderId,
+                        '2' => $paymentMethod,
+                        '3' => $orderType,
+                        '4' => $paymentStatus,
+                        '5' => $itemDetails,
+                        '6' => $storeName,
+                    ],
+                    'message'   => $message,
+                ];
+            } else {
+                $template = $config['otp_template'] ?? 'Your verification code is #OTP#';
+                $message = str_replace("#OTP#", $otp, $template);
+                $payload = [
+                    'mobile'  => $receiver,
+                    'otp'     => (string)$otp,
+                    'message' => $message,
+                ];
+            }
 
             $headers = [
                 'Content-Type: application/json',
@@ -97,10 +161,15 @@ trait SmsGatewayTrait
                 }
 
                 $json = json_decode((string)$result, true);
-                if ($httpCode >= 200 && $httpCode < 300 && (isset($json['status']) && $json['status'] === 'success')) {
+                if ($httpCode >= 200 && $httpCode < 300 && ((isset($json['status']) && $json['status'] === 'success') || isset($json['provider_message_id']))) {
+                    $successMsg = match($testType) {
+                        'seller_order' => "Test Seller Order Alert ({$template}) dispatched successfully via WhatsApp!",
+                        'customer_order' => "Test Customer Order Alert ({$template}) dispatched successfully via WhatsApp!",
+                        default => "OTP dispatched successfully via WhatsApp!",
+                    };
                     return [
                         'success' => true,
-                        'message' => 'OTP dispatched successfully via WhatsApp!',
+                        'message' => $successMsg,
                         'provider_message_id' => $json['provider_message_id'] ?? null,
                         'otp' => $otp,
                     ];

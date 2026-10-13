@@ -168,16 +168,37 @@
                                                                 'seller_order_template' => 'seller_order_status',
                                                                 'customer_order_template' => 'customer_order_status',
                                                             };
+                                                            $test_type = match($key) {
+                                                                'otp_template' => 'otp',
+                                                                'seller_order_template' => 'seller_order',
+                                                                'customer_order_template' => 'customer_order',
+                                                            };
+                                                            $test_label = match($key) {
+                                                                'otp_template' => 'OTP Verification',
+                                                                'seller_order_template' => 'Seller Order Alert',
+                                                                'customer_order_template' => 'Customer Order Alert',
+                                                            };
                                                             $item_is_active = (int)($values[$status_key] ?? 1) === 1;
                                                         @endphp
-                                                        <div class="tps-seg" style="transform: scale(0.85); transform-origin: right center;">
-                                                            <input type="radio" id="{{ $gateway->key_name }}-{{ $status_key }}-active" name="{{ $status_key }}" value="1"
-                                                                   {{ $item_is_active ? 'checked' : '' }}>
-                                                            <label for="{{ $gateway->key_name }}-{{ $status_key }}-active">{{ translate('messages.Active') }}</label>
+                                                        <div class="d-flex align-items-center" style="gap: 8px;">
+                                                            <button type="button" class="btn btn-outline-info btn-test-template py-1 px-2"
+                                                                    style="font-size: 11px; font-weight: 600; border-radius: 20px; line-height: 1.2;"
+                                                                    data-gateway="{{ $gateway->key_name }}"
+                                                                    data-test-type="{{ $test_type }}"
+                                                                    data-test-title="{{ $test_label }}"
+                                                                    data-title="{{ $meta['label'] }}">
+                                                                <i class="tio-send"></i> {{ translate('Test') }}
+                                                            </button>
 
-                                                            <input type="radio" id="{{ $gateway->key_name }}-{{ $status_key }}-inactive" name="{{ $status_key }}" value="0"
-                                                                   {{ $item_is_active ? '' : 'checked' }}>
-                                                            <label for="{{ $gateway->key_name }}-{{ $status_key }}-inactive">{{ translate('messages.Inactive') }}</label>
+                                                            <div class="tps-seg" style="transform: scale(0.85); transform-origin: right center;">
+                                                                <input type="radio" id="{{ $gateway->key_name }}-{{ $status_key }}-active" name="{{ $status_key }}" value="1"
+                                                                       {{ $item_is_active ? 'checked' : '' }}>
+                                                                <label for="{{ $gateway->key_name }}-{{ $status_key }}-active">{{ translate('messages.Active') }}</label>
+
+                                                                <input type="radio" id="{{ $gateway->key_name }}-{{ $status_key }}-inactive" name="{{ $status_key }}" value="0"
+                                                                       {{ $item_is_active ? '' : 'checked' }}>
+                                                                <label for="{{ $gateway->key_name }}-{{ $status_key }}-inactive">{{ translate('messages.Inactive') }}</label>
+                                                            </div>
                                                         </div>
                                                     @endif
                                                 </div>
@@ -246,14 +267,28 @@
                         @csrf
                         <div class="modal-body">
                             <input type="hidden" name="gateway" id="testGatewayInput">
+                            <input type="hidden" name="test_type" id="testTypeInput" value="otp">
 
                             <div class="mb-3">
                                 <label class="form-label text-capitalize font-weight-bold">
-                                    {{ translate('Gateway') }}
+                                    {{ translate('Test Configuration') }}
                                 </label>
                                 <div class="alert alert-soft-primary py-2 px-3 mb-0 d-flex align-items-center justify-content-between">
-                                    <span id="testGatewayTitle" class="font-weight-bold"></span>
+                                    <div>
+                                        <span id="testGatewayTitle" class="font-weight-bold d-block"></span>
+                                        <small id="testTypeDesc" class="text-muted"></small>
+                                    </div>
                                     <span class="badge badge-primary text-uppercase" id="testGatewayBadge"></span>
+                                </div>
+                            </div>
+
+                            <div id="orderPreviewNote" class="alert alert-soft-info p-3 mb-3 d-none">
+                                <div class="d-flex align-items-center font-weight-bold text-info mb-1">
+                                    <i class="tio-receipt-outlined fz-16 mr-1"></i>
+                                    <span id="orderPreviewTitle">{{ translate('Live Sample Order Payload') }}</span>
+                                </div>
+                                <div class="small text-dark">
+                                    {{ translate('Dispatches live WhatsApp test using approved Meta template format with sample items (Mango 99, Mojito 49), Order ID, Store and amounts.') }}
                                 </div>
                             </div>
 
@@ -269,7 +304,7 @@
                                 </small>
                             </div>
 
-                            <div class="form-group">
+                            <div class="form-group" id="otpInputGroup">
                                 <label for="testOtpCode" class="form-label font-weight-bold">
                                     {{ translate('Test OTP Code') }} <small class="text-muted">({{ translate('Optional') }})</small>
                                 </label>
@@ -296,7 +331,7 @@
                             <button type="submit" class="btn btn--primary" id="btnSendTestSms">
                                 <span class="spinner-border spinner-border-sm d-none mr-1" id="testSmsSpinner" role="status" aria-hidden="true"></span>
                                 <i class="tio-send mr-1" id="testSmsIcon"></i>
-                                <span>{{ translate('Send Test OTP') }}</span>
+                                <span id="btnSendTestText">{{ translate('Send Test OTP') }}</span>
                             </button>
                         </div>
                     </form>
@@ -314,9 +349,50 @@
             const title = $(this).data('title');
 
             $('#testGatewayInput').val(gateway);
+            $('#testTypeInput').val('otp');
             $('#testGatewayTitle').text(title);
             $('#testGatewayBadge').text(gateway);
+            $('#testTypeDesc').text('{{ translate("Testing general OTP verification delivery") }}');
+            $('#otpInputGroup').removeClass('d-none');
+            $('#orderPreviewNote').addClass('d-none');
+            $('#btnSendTestText').text('{{ translate("Send Test OTP") }}');
             $('#testOtpCode').val(Math.floor(100000 + Math.random() * 900000));
+            $('#testSmsAlert').addClass('d-none').html('');
+            $('#testReceiverPhone').val('');
+            $('#testSmsModal').modal('show');
+        });
+
+        $(document).on('click', '.btn-test-template', function () {
+            const gateway = $(this).data('gateway');
+            const title = $(this).data('title');
+            const testType = $(this).data('test-type');
+            const testTitle = $(this).data('test-title');
+
+            $('#testGatewayInput').val(gateway);
+            $('#testTypeInput').val(testType);
+            $('#testGatewayTitle').text(title);
+            $('#testGatewayBadge').text(testTitle);
+
+            if (testType === 'otp') {
+                $('#otpInputGroup').removeClass('d-none');
+                $('#orderPreviewNote').addClass('d-none');
+                $('#testTypeDesc').text('{{ translate("Testing OTP verification delivery") }}');
+                $('#btnSendTestText').text('{{ translate("Send Test OTP") }}');
+                $('#testOtpCode').val(Math.floor(100000 + Math.random() * 900000));
+            } else if (testType === 'seller_order') {
+                $('#otpInputGroup').addClass('d-none');
+                $('#orderPreviewNote').removeClass('d-none');
+                $('#testTypeDesc').text('{{ translate("Testing Seller Order Alert template via Meta WhatsApp") }}');
+                $('#orderPreviewTitle').text('{{ translate("Seller Order Alert Template Test") }}');
+                $('#btnSendTestText').text('{{ translate("Send Test Seller Alert") }}');
+            } else if (testType === 'customer_order') {
+                $('#otpInputGroup').addClass('d-none');
+                $('#orderPreviewNote').removeClass('d-none');
+                $('#testTypeDesc').text('{{ translate("Testing Customer Order Alert template via Meta WhatsApp") }}');
+                $('#orderPreviewTitle').text('{{ translate("Customer Order Alert Template Test") }}');
+                $('#btnSendTestText').text('{{ translate("Send Test Customer Alert") }}');
+            }
+
             $('#testSmsAlert').addClass('d-none').html('');
             $('#testReceiverPhone').val('');
             $('#testSmsModal').modal('show');

@@ -158,8 +158,9 @@ class SMSModuleController extends Controller
         $gateway = $request->input('gateway');
         $receiver = trim($request->input('receiver'));
         $otp = $request->input('otp') ? trim($request->input('otp')) : (string)rand(100000, 999999);
+        $testType = $request->input('test_type', 'otp');
 
-        $result = \App\Support\Notification\Sms::testGateway($gateway, $receiver, $otp);
+        $result = \App\Support\Notification\Sms::testGateway($gateway, $receiver, $otp, $testType);
 
         return response()->json($result);
     }
