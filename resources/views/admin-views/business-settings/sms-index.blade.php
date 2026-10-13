@@ -180,25 +180,14 @@
                                                             };
                                                             $item_is_active = (int)($values[$status_key] ?? 1) === 1;
                                                         @endphp
-                                                        <div class="d-flex align-items-center" style="gap: 8px;">
-                                                            <button type="button" class="btn btn-outline-info btn-test-template py-1 px-2"
-                                                                    style="font-size: 11px; font-weight: 600; border-radius: 20px; line-height: 1.2;"
-                                                                    data-gateway="{{ $gateway->key_name }}"
-                                                                    data-test-type="{{ $test_type }}"
-                                                                    data-test-title="{{ $test_label }}"
-                                                                    data-title="{{ $meta['label'] }}">
-                                                                <i class="tio-send"></i> {{ translate('Test') }}
-                                                            </button>
+                                                        <div class="tps-seg" style="transform: scale(0.85); transform-origin: right center;">
+                                                            <input type="radio" id="{{ $gateway->key_name }}-{{ $status_key }}-active" name="{{ $status_key }}" value="1"
+                                                                   {{ $item_is_active ? 'checked' : '' }}>
+                                                            <label for="{{ $gateway->key_name }}-{{ $status_key }}-active">{{ translate('messages.Active') }}</label>
 
-                                                            <div class="tps-seg" style="transform: scale(0.85); transform-origin: right center;">
-                                                                <input type="radio" id="{{ $gateway->key_name }}-{{ $status_key }}-active" name="{{ $status_key }}" value="1"
-                                                                       {{ $item_is_active ? 'checked' : '' }}>
-                                                                <label for="{{ $gateway->key_name }}-{{ $status_key }}-active">{{ translate('messages.Active') }}</label>
-
-                                                                <input type="radio" id="{{ $gateway->key_name }}-{{ $status_key }}-inactive" name="{{ $status_key }}" value="0"
-                                                                       {{ $item_is_active ? '' : 'checked' }}>
-                                                                <label for="{{ $gateway->key_name }}-{{ $status_key }}-inactive">{{ translate('messages.Inactive') }}</label>
-                                                            </div>
+                                                            <input type="radio" id="{{ $gateway->key_name }}-{{ $status_key }}-inactive" name="{{ $status_key }}" value="0"
+                                                                   {{ $item_is_active ? '' : 'checked' }}>
+                                                            <label for="{{ $gateway->key_name }}-{{ $status_key }}-inactive">{{ translate('messages.Inactive') }}</label>
                                                         </div>
                                                     @endif
                                                 </div>
@@ -220,9 +209,24 @@
                                                     @endif
                                                 </div>
 
-                                                @if (! empty($field_hints[$key]))
-                                                    <small class="tps-field__hint">{{ $field_hints[$key] }}</small>
-                                                @endif
+                                                <div class="d-flex justify-content-between align-items-center mt-1" style="min-height: 24px;">
+                                                    @if (! empty($field_hints[$key]))
+                                                        <small class="tps-field__hint mb-0" style="font-size: 11px;">{{ $field_hints[$key] }}</small>
+                                                    @else
+                                                        <span></span>
+                                                    @endif
+
+                                                    @if ($gateway->key_name === 'custom_otp' && in_array($key, ['otp_template', 'seller_order_template', 'customer_order_template']))
+                                                        <button type="button" class="btn btn-outline-info btn-xs btn-test-template flex-shrink-0 ml-2"
+                                                                style="font-size: 11px; font-weight: 600; border-radius: 6px; padding: 3px 10px; white-space: nowrap;"
+                                                                data-gateway="{{ $gateway->key_name }}"
+                                                                data-test-type="{{ $test_type }}"
+                                                                data-test-title="{{ $test_label }}"
+                                                                data-title="{{ $meta['label'] }}">
+                                                            <i class="tio-send mr-1"></i> {{ translate('Test') }}
+                                                        </button>
+                                                    @endif
+                                                </div>
                                             </div>
                                         </div>
                                     @endforeach
