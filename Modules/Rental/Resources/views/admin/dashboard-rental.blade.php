@@ -16,8 +16,8 @@ show active
             <div class="row align-items-center py-2">
                 <div class="col-sm mb-2 mb-sm-0">
                     <div class="d-flex align-items-center">
-                        <img class="onerror-image" data-onerror-image="{{ asset('/public/assets/admin/img/grocery.svg') }}"
-                             src="{{ Config::get('module.current_module_icon') }}" width="38" alt="img">
+                        <img class="onerror-image" data-onerror-image="{{ asset('public/assets/admin/img/rental/image_car.png') }}"
+                             src="{{ Config::get('module.current_module_icon') ?: asset('public/assets/admin/img/rental/image_car.png') }}" width="38" alt="Rental">
                         <div class="w-0 flex-grow pl-2">
                             <h1 class="page-header-title text-title mb-0">
 
