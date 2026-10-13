@@ -12,8 +12,14 @@ class SettingService extends BaseService
 {
     public function hasActiveSmsGateway(): bool
     {
-        return Setting::whereJsonContains('live_values->status', '1')
-            ->where('settings_type', 'sms_config')
+        return Setting::where('settings_type', 'sms_config')
+            ->where(function ($query) {
+                $query->where('is_active', 1)
+                    ->orWhere('live_values->status', 1)
+                    ->orWhere('live_values->status', '1')
+                    ->orWhereJsonContains('live_values->status', 1)
+                    ->orWhereJsonContains('live_values->status', '1');
+            })
             ->exists();
     }
 

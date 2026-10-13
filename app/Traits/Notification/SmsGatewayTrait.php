@@ -66,7 +66,8 @@ trait SmsGatewayTrait
                     CURLOPT_HTTPHEADER => $headers,
                     CURLOPT_CONNECTTIMEOUT => self::smsConnectTimeout(),
                     CURLOPT_TIMEOUT => self::smsTimeout(),
-                    CURLOPT_SSL_VERIFYPEER => true,
+                    CURLOPT_SSL_VERIFYPEER => config('notification.sms.verify_ssl', !app()->isLocal()),
+                    CURLOPT_SSL_VERIFYHOST => config('notification.sms.verify_ssl', !app()->isLocal()) ? 2 : 0,
                 ]);
 
                 $result = curl_exec($curl);
