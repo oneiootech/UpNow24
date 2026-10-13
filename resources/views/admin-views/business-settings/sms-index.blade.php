@@ -14,6 +14,7 @@
         $secret_keys = ['token', 'api_secret', 'auth_key', 'api_key', 'secret'];
 
         $gateway_meta = [
+            'custom_otp' => ['label' => 'Custom WhatsApp & SMS OTP Gateway', 'hint' => translate('Universal WhatsApp & SMS OTP Gateway via WhatsApp Cloud API / Furtikart.'), 'link' => 'https://wpcrm.furtikart.com/admin/gateway/otp'],
             'twilio' => ['label' => 'Twilio', 'hint' => translate('Credentials live in the Twilio Console dashboard.'), 'link' => 'https://console.twilio.com/'],
             'nexmo' => ['label' => 'Vonage (Nexmo)', 'hint' => translate('Find the API key and secret on the Vonage dashboard.'), 'link' => 'https://dashboard.nexmo.com/'],
             '2factor' => ['label' => '2Factor', 'hint' => translate('Copy the API key from your provider account.'), 'link' => 'https://2factor.in/'],
@@ -22,12 +23,17 @@
         ];
 
         $field_labels = [
+            'api_url' => 'Custom Gateway API URL',
+            'token' => 'Bearer Token / API Key',
+            'otp_template' => 'OTP Message Template',
             'sid' => 'Account SID',
             'messaging_service_sid' => 'Messaging Service SID',
             'template_id' => 'Template ID',
         ];
 
         $field_hints = [
+            'api_url' => translate('Endpoint URL. Default: https://wpcrm.furtikart.com/api/v1/gateway/otp'),
+            'token' => translate('Bearer token / API key passed in Authorization header.'),
             'otp_template' => translate('Use #OTP# where the generated code should appear.'),
             'from' => translate('The sender number or ID recipients will see.'),
             'sender_id' => translate('Approved alphanumeric sender ID, if your account uses one.'),

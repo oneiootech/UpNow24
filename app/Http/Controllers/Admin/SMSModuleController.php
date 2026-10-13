@@ -26,7 +26,26 @@ class SMSModuleController extends Controller
                 }
             }
         }
-        $data_values=  Setting::where('settings_type','sms_config')->whereIn('key_name', ['twilio','nexmo','2factor','msg91','alphanet_sms'])->orderByDesc('is_active')->get() ?? [];
+        $existingCustomOtp = Setting::where('settings_type','sms_config')->where('key_name', 'custom_otp')->first();
+        if (!$existingCustomOtp) {
+            $defaultCredentials = [
+                'gateway' => 'custom_otp',
+                'mode' => 'live',
+                'status' => 1,
+                'api_url' => 'https://wpcrm.furtikart.com/api/v1/gateway/otp',
+                'token' => 'biz_onex_admin_AgKrgeskZhKcx5ipiPZcuftjymOK108n0r6HRmZ6',
+                'otp_template' => 'Your verification code is #OTP#',
+            ];
+            Setting::create([
+                'key_name' => 'custom_otp',
+                'live_values' => $defaultCredentials,
+                'test_values' => $defaultCredentials,
+                'settings_type' => 'sms_config',
+                'mode' => 'live',
+                'is_active' => 1,
+            ]);
+        }
+        $data_values=  Setting::where('settings_type','sms_config')->whereIn('key_name', ['custom_otp','twilio','nexmo','2factor','msg91','alphanet_sms'])->orderByDesc('is_active')->get() ?? [];
         return view('admin-views.business-settings.sms-index',compact('data_values','published_status','payment_url'));
     }
 
@@ -43,7 +62,14 @@ class SMSModuleController extends Controller
             Toastr::warning(translate('Phone verification status is enabled in login setup. First disable from login setup.'));
             return redirect()->back();
         }
-        if ($module == 'twilio') {
+        if ($module == 'custom_otp') {
+            $additional_data = [
+                'status' => (int)$request['status'],
+                'api_url' => $request['api_url'] ?? 'https://wpcrm.furtikart.com/api/v1/gateway/otp',
+                'token' => $request['token'],
+                'otp_template' => $request['otp_template'] ?? 'Your verification code is #OTP#',
+            ];
+        } elseif ($module == 'twilio') {
                 $additional_data = [
                     'status' => $request['status'],
                     'sid' => $request['sid'],
@@ -99,7 +125,7 @@ class SMSModuleController extends Controller
     ]);
 
     if ($request['status'] == 1) {
-        foreach (['twilio','nexmo','2factor','msg91','alphanet_sms'] as $gateway) {
+        foreach (['custom_otp','twilio','nexmo','2factor','msg91','alphanet_sms'] as $gateway) {
             if ($module != $gateway) {
                 $keep = Setting::where(['key_name' => $gateway, 'settings_type' => 'sms_config'])->first();
                 if (isset($keep)) {

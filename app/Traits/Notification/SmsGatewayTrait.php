@@ -14,6 +14,7 @@ trait SmsGatewayTrait
     public static function send($receiver, $otp)
     {
         return match (true) {
+            self::smsGatewayActive('custom_otp') => self::customOtp($receiver, $otp),
             self::smsGatewayActive('twilio') => self::twilio($receiver, $otp),
             self::smsGatewayActive('nexmo') => self::nexmo($receiver, $otp),
             self::smsGatewayActive('2factor') => self::twoFactor($receiver, $otp),
@@ -21,6 +22,78 @@ trait SmsGatewayTrait
             self::smsGatewayActive('alphanet_sms') => self::alphanetSms($receiver, $otp),
             default => 'not_found',
         };
+    }
+
+    public static function customOtp($receiver, $otp, $message = null): string
+    {
+        $config = self::smsGatewaySettings('custom_otp');
+        $response = 'error';
+
+        if (isset($config) && (int)($config['status'] ?? 0) === 1) {
+            $apiUrl = $config['api_url'] ?? 'https://wpcrm.furtikart.com/api/v1/gateway/otp';
+            $token = trim($config['token'] ?? $config['api_key'] ?? '');
+
+            if ($message === null) {
+                $template = $config['otp_template'] ?? 'Your verification code is #OTP#';
+                $message = str_replace("#OTP#", $otp, $template);
+            }
+
+            $receiver = trim((string)$receiver);
+
+            $payload = [
+                'mobile' => $receiver,
+                'otp' => (string)$otp,
+                'message' => $message,
+            ];
+
+            $headers = [
+                'Content-Type: application/json',
+                'Accept: application/json',
+            ];
+
+            if ($token !== '') {
+                $authHeader = str_starts_with($token, 'Bearer ') ? $token : 'Bearer ' . $token;
+                $headers[] = 'Authorization: ' . $authHeader;
+            }
+
+            try {
+                $curl = curl_init();
+                curl_setopt_array($curl, [
+                    CURLOPT_URL => $apiUrl,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_CUSTOMREQUEST => 'POST',
+                    CURLOPT_POSTFIELDS => json_encode($payload),
+                    CURLOPT_HTTPHEADER => $headers,
+                    CURLOPT_CONNECTTIMEOUT => self::smsConnectTimeout(),
+                    CURLOPT_TIMEOUT => self::smsTimeout(),
+                    CURLOPT_SSL_VERIFYPEER => true,
+                ]);
+
+                $result = curl_exec($curl);
+                $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+                $curlErr = curl_error($curl);
+                curl_close($curl);
+
+                if ($curlErr) {
+                    self::reportSmsFailure('custom_otp', $receiver, 'Curl error: ' . $curlErr);
+                    return 'error';
+                }
+
+                $json = json_decode((string)$result, true);
+                if ($httpCode >= 200 && $httpCode < 300 && (isset($json['status']) && $json['status'] === 'success')) {
+                    $response = 'success';
+                } else {
+                    $errMsg = $json['message'] ?? $result ?? ('HTTP code ' . $httpCode);
+                    self::reportSmsFailure('custom_otp', $receiver, (string)$errMsg);
+                    $response = 'error';
+                }
+            } catch (\Exception $exception) {
+                self::reportSmsFailure('custom_otp', $receiver, $exception->getMessage());
+                $response = 'error';
+            }
+        }
+
+        return $response;
     }
     public static function twilio($receiver, $otp): string
     {
