@@ -52,11 +52,11 @@ class WhatsAppOrderNotifier
         $itemDetails = self::formatItemDetails($order);
 
         $message = "📦 *New Order Alert!*\n\n"
-            . "• *Order ID:* #{$orderId}\n\n"
+            . "Order ID: #{$orderId}\n\n"
             . "*Item details:*\n{$itemDetails}\n\n"
-            . "• *Store:* {$storeName}\n"
-            . "• *Amount:* ₹{$amount}\n\n"
-            . "Please open your UpNow24 Seller panel to prepare the order.";
+            . "Store: {$storeName}\n"
+            . "Amount: ₹{$amount}\n\n"
+            . "Please open your UpNow24 App to *Accept & prepare* the order.";
 
         $setting = Setting::where('settings_type', 'sms_config')->where('key_name', 'custom_otp')->first();
         $template = $setting?->live_values['seller_order_template'] ?? 'seller_order_alert';
