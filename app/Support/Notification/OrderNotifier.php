@@ -35,6 +35,8 @@ class OrderNotifier
             'delivery_man_confirmed_delivery' => fn () => self::deliveryManConfirmedDelivery($order, $storePushEnabled),
             'delivery_man_assigned_order' => fn () => self::deliveryManAssignedOrder($order),
             'mail_customer' => fn () => self::mailCustomer($order),
+            'whatsapp_seller_new_order' => fn () => self::whatsappSellerNewOrder($order),
+            'whatsapp_customer_order' => fn () => self::whatsappCustomerOrder($order, $status),
         ];
 
         $failed = 0;
@@ -302,5 +304,20 @@ class OrderNotifier
     private static function storeHandlesOwnDelivery($order, mixed $storePushEnabled): bool
     {
         return (bool) ($order->store?->sub_self_delivery && $storePushEnabled);
+    }
+
+    private static function whatsappSellerNewOrder($order): void
+    {
+        $isNewOrder = (in_array($order->payment_method, ['cash_on_delivery', 'offline_payment']) && $order->order_status == 'pending')
+            || (! in_array($order->payment_method, ['cash_on_delivery', 'offline_payment']) && $order->order_status == 'confirmed');
+
+        if ($isNewOrder) {
+            WhatsAppOrderNotifier::notifySellerNewOrder($order);
+        }
+    }
+
+    private static function whatsappCustomerOrder($order, string $status): void
+    {
+        WhatsAppOrderNotifier::notifyCustomerOrderStatus($order, $status);
     }
 }
