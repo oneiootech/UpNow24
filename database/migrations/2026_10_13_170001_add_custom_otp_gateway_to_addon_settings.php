@@ -20,6 +20,8 @@ return new class extends Migration
             'api_url' => 'https://wpcrm.furtikart.com/api/v1/gateway/otp',
             'token' => 'biz_onex_admin_AgKrgeskZhKcx5ipiPZcuftjymOK108n0r6HRmZ6',
             'otp_template' => 'Your verification code is #OTP#',
+            'seller_order_template' => 'seller_order_alert',
+            'customer_order_template' => 'customer_order_alert',
         ]);
 
         if (!$existing) {
