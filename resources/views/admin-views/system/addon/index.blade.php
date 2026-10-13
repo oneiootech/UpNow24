@@ -66,7 +66,8 @@
         // ---------------------------------------------------------------------
         $addonItems = [];
         foreach ($addons as $addonPath) {
-            $info = include $addonPath . '/Addon/info.php';
+            $fullInfoPath = base_path($addonPath . '/Addon/info.php');
+            $info = file_exists($fullInfoPath) ? include $fullInfoPath : [];
             $info = is_array($info) ? $info : [];
             $name = $info['name'] ?? basename($addonPath);
 

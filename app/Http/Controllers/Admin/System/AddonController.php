@@ -24,7 +24,7 @@ class AddonController extends Controller
 {
     use ActivationTrait;
     public function __construct(){
-        if (is_dir('Modules\Gateways\Traits') && trait_exists('Modules\Gateways\Traits\SmsGateway')) {
+        if (is_dir(base_path('Modules/Gateways/Traits')) && trait_exists('Modules\Gateways\Traits\SmsGateway')) {
             $this->extendWithSmsGatewayTrait();
         }
     }
@@ -73,7 +73,7 @@ class AddonController extends Controller
                 'message'=> translate('messages.Update option is disable for demo')
             ]);
         }
-        $full_data = include($request['path'] . '/Addon/info.php');
+        $full_data = include base_path($request['path'] . '/Addon/info.php');
         $path = $request['path'];
         $addon_name = $full_data['name'];
 
@@ -155,7 +155,7 @@ class AddonController extends Controller
             Toastr::info($message);
             return back();
         }
-        $full_data = include($request['path'] . '/Addon/info.php');
+        $full_data = include base_path($request['path'] . '/Addon/info.php');
         $addon_name = $full_data['name'];
 
             $response= $this->getRequestConfig(
