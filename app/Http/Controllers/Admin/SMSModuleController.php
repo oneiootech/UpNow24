@@ -67,8 +67,11 @@ class SMSModuleController extends Controller
                 'status' => (int)$request['status'],
                 'api_url' => $request['api_url'] ?? 'https://wpcrm.furtikart.com/api/v1/gateway/otp',
                 'token' => $request['token'],
+                'otp_status' => (int)($request['otp_status'] ?? 0),
                 'otp_template' => $request['otp_template'] ?? 'Your verification code is #OTP#',
+                'seller_order_status' => (int)($request['seller_order_status'] ?? 0),
                 'seller_order_template' => $request['seller_order_template'] ?? 'seller_order_alert',
+                'customer_order_status' => (int)($request['customer_order_status'] ?? 0),
                 'customer_order_template' => $request['customer_order_template'] ?? 'customer_order_alert',
             ];
         } elseif ($module == 'twilio') {

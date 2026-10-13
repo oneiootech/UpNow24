@@ -105,7 +105,7 @@
                     $values = $gateway->live_values;
                     $is_active = (int) ($values['status'] ?? 0) === 1;
                     $meta = $gateway_meta[$gateway->key_name] ?? ['label' => ucfirst(str_replace('_', ' ', $gateway->key_name)), 'hint' => null, 'link' => null];
-                    $fields = collect($values)->except(['gateway', 'mode', 'status']);
+                    $fields = collect($values)->except(['gateway', 'mode', 'status', 'otp_status', 'seller_order_status', 'customer_order_status']);
                 @endphp
 
                 <div class="digital_payment_methods {{ $addon_overrides ? 'inactive' : '' }}">
@@ -151,14 +151,36 @@
 
                                         <div class="col-md-6">
                                             <div class="tps-field">
-                                                <label for="{{ $field_id }}" class="tps-field__label text-capitalize">
-                                                    {{ $field_labels[$key] ?? translate($key) }}
-                                                    @if ($is_optional)
-                                                        <span class="tps-opt">({{ translate('Optional') }})</span>
-                                                    @else
-                                                        <span class="tps-req">*</span>
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <label for="{{ $field_id }}" class="tps-field__label text-capitalize mb-0">
+                                                        {{ $field_labels[$key] ?? translate($key) }}
+                                                        @if ($is_optional)
+                                                            <span class="tps-opt">({{ translate('Optional') }})</span>
+                                                        @else
+                                                            <span class="tps-req">*</span>
+                                                        @endif
+                                                    </label>
+
+                                                    @if ($gateway->key_name === 'custom_otp' && in_array($key, ['otp_template', 'seller_order_template', 'customer_order_template']))
+                                                        @php
+                                                            $status_key = match($key) {
+                                                                'otp_template' => 'otp_status',
+                                                                'seller_order_template' => 'seller_order_status',
+                                                                'customer_order_template' => 'customer_order_status',
+                                                            };
+                                                            $item_is_active = (int)($values[$status_key] ?? 1) === 1;
+                                                        @endphp
+                                                        <div class="tps-seg" style="transform: scale(0.85); transform-origin: right center;">
+                                                            <input type="radio" id="{{ $gateway->key_name }}-{{ $status_key }}-active" name="{{ $status_key }}" value="1"
+                                                                   {{ $item_is_active ? 'checked' : '' }}>
+                                                            <label for="{{ $gateway->key_name }}-{{ $status_key }}-active">{{ translate('messages.Active') }}</label>
+
+                                                            <input type="radio" id="{{ $gateway->key_name }}-{{ $status_key }}-inactive" name="{{ $status_key }}" value="0"
+                                                                   {{ $item_is_active ? '' : 'checked' }}>
+                                                            <label for="{{ $gateway->key_name }}-{{ $status_key }}-inactive">{{ translate('messages.Inactive') }}</label>
+                                                        </div>
                                                     @endif
-                                                </label>
+                                                </div>
 
                                                 <div class="tps-input-wrap {{ $is_secret ? 'has-two-actions' : '' }}">
                                                     <input id="{{ $field_id }}" name="{{ $key }}" class="form-control"

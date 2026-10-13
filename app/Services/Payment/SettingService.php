@@ -20,6 +20,14 @@ class SettingService extends BaseService
                     ->orWhereJsonContains('live_values->status', 1)
                     ->orWhereJsonContains('live_values->status', '1');
             })
+            ->where(function ($query) {
+                $query->where('key_name', '!=', 'custom_otp')
+                    ->orWhere(function ($q) {
+                        $q->whereNull('live_values->otp_status')
+                            ->orWhere('live_values->otp_status', 1)
+                            ->orWhere('live_values->otp_status', '1');
+                    });
+            })
             ->exists();
     }
 

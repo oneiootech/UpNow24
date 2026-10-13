@@ -135,7 +135,7 @@ trait SmsGatewayTrait
         $config = self::smsGatewaySettings('custom_otp');
         $response = 'error';
 
-        if (isset($config) && (int)($config['status'] ?? 0) === 1) {
+        if (isset($config) && (int)($config['status'] ?? 0) === 1 && (int)($config['otp_status'] ?? 1) === 1) {
             $apiUrl = $config['api_url'] ?? 'https://wpcrm.furtikart.com/api/v1/gateway/otp';
             $token = trim($config['token'] ?? $config['api_key'] ?? '');
 
@@ -412,7 +412,15 @@ trait SmsGatewayTrait
     {
         $config = self::smsGatewaySettings($name);
 
-        return isset($config) && $config['status'] == 1;
+        if (!isset($config) || (int)($config['status'] ?? 0) !== 1) {
+            return false;
+        }
+
+        if ($name === 'custom_otp' && isset($config['otp_status']) && (int)$config['otp_status'] !== 1) {
+            return false;
+        }
+
+        return true;
     }
 
     private static function smsConnectTimeout(): int

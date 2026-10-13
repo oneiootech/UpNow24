@@ -59,7 +59,15 @@ class WhatsAppOrderNotifier
             . "Please open your UpNow24 App to *Accept & prepare* the order.";
 
         $setting = Setting::where('settings_type', 'sms_config')->where('key_name', 'custom_otp')->first();
-        $template = $setting?->live_values['seller_order_template'] ?? 'seller_order_alert';
+        if (!$setting || (int)($setting->live_values['status'] ?? 0) !== 1) {
+            return false;
+        }
+
+        if ((int)($setting->live_values['seller_order_status'] ?? 1) !== 1) {
+            return false;
+        }
+
+        $template = $setting->live_values['seller_order_template'] ?? 'seller_order_alert';
 
         return self::dispatchWhatsApp($sellerPhone, $message, [
             'template'  => $template,
@@ -112,7 +120,15 @@ class WhatsAppOrderNotifier
             . "✅ *Order Is Confirmed Deliverd Soon*";
 
         $setting = Setting::where('settings_type', 'sms_config')->where('key_name', 'custom_otp')->first();
-        $template = $setting?->live_values['customer_order_template'] ?? 'customer_order_alert';
+        if (!$setting || (int)($setting->live_values['status'] ?? 0) !== 1) {
+            return false;
+        }
+
+        if ((int)($setting->live_values['customer_order_status'] ?? 1) !== 1) {
+            return false;
+        }
+
+        $template = $setting->live_values['customer_order_template'] ?? 'customer_order_alert';
 
         return self::dispatchWhatsApp($customerPhone, $message, [
             'template'  => $template,
