@@ -336,11 +336,13 @@
                                         </div>
                                     </div>
                                     <div class="col-lg-6">
-                                        <input id="pac-input1" class="controls rounded" data-toggle="tooltip"
-                                               data-placement="right"
-                                               data-original-title="{{ translate('Search your location') }}"
-                                               type="text" placeholder="{{ translate('Search') }}" />
-                                        <div id="map" class="min-h-100"></div>
+                                        <div class="position-relative" style="min-height: 380px; height: 100%;">
+                                            <input id="pac-input1" class="controls rounded" data-toggle="tooltip"
+                                                   data-placement="right"
+                                                   data-original-title="{{ translate('Search your location') }}"
+                                                   type="text" placeholder="{{ translate('Search') }}" />
+                                            <div id="map" style="min-height: 380px; height: 100%; width: 100%; border-radius: 8px;"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -600,7 +602,7 @@
 
     <script src="{{ asset('public/assets/admin/js/spartan-multi-image-picker.js') }}"></script>
     <script
-        src="https://maps.googleapis.com/maps/api/js?key={{ \App\CentralLogics\Helpers::get_business_settings('map_api_key', false) }}&libraries=drawing,places&v=3.45.8">
+        src="https://maps.googleapis.com/maps/api/js?key={{ \App\CentralLogics\Helpers::get_business_settings('map_api_key', false) }}&libraries=drawing,places&v=3.61">
     </script>
     <script src="{{asset('Modules/Rental/public/assets/js/admin/view-pages/provider-edit.js')}}"></script>
 

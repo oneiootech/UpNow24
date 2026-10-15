@@ -4,7 +4,7 @@ $('#pac-input1').on('keydown', function(event) {
         event.preventDefault();
     }
 });
-$(document).on('ready', function() {
+$(document).ready(function() {
     $('.offcanvas').on('click', function() {
         $('.offcanvas, .floating--date').removeClass('active')
     })
@@ -29,14 +29,17 @@ function readURL(input, viewer) {
 }
 
 
-let myLatlng = {
-    lat: $('#data-set').data('lat'),
-    lng: $('#data-set').data('lng')
-};
-let map = new google.maps.Map(document.getElementById("map"), {
-    zoom: 13,
-    center: myLatlng,
-});
+let storeLat = parseFloat($('#data-set').data('lat')) || 23.757989;
+let storeLng = parseFloat($('#data-set').data('lng')) || 90.360587;
+let myLatlng = { lat: storeLat, lng: storeLng };
+let map;
+let mapElement = document.getElementById("map");
+if (mapElement && typeof google !== 'undefined' && google.maps) {
+    map = new google.maps.Map(mapElement, {
+        zoom: 13,
+        center: myLatlng,
+    });
+}
 let zonePolygon = null;
 let infoWindow = new google.maps.InfoWindow({
     content: "Click the map to get Lat/Lng!",
@@ -272,7 +275,7 @@ $('.delivery-time').on('click', function() {
             );
         });
         // ---- file upload with textbox ends
-        $(document).on('ready', function() {
+        $(document).ready(function() {
             $('.plan-slider').owlCarousel({
                 loop: false,
                 margin: 30,

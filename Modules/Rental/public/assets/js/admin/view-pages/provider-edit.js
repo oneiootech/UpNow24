@@ -165,7 +165,7 @@ $.fn.select2DynamicDisplay = function () {
 $(".basic-multiple-select2").select2DynamicDisplay();
 
 
-$(document).on('ready', function() {
+$(document).ready(function() {
     $('#pac-input1').on('keydown', function(event) {
         if (event.key === 'Enter') {
             event.preventDefault();
@@ -199,11 +199,17 @@ function readURL(input, viewer) {
 }
 
 
-let myLatlng = { lat: $('#data-set').data('store-lat'), lng: $('#data-set').data('store-lng') };
-const map = new google.maps.Map(document.getElementById("map"), {
-    zoom: 13,
-    center: myLatlng,
-});
+let storeLat = parseFloat($('#data-set').data('store-lat')) || parseFloat($('#data-set').data('lat')) || 23.757989;
+let storeLng = parseFloat($('#data-set').data('store-lng')) || parseFloat($('#data-set').data('lng')) || 90.360587;
+let myLatlng = { lat: storeLat, lng: storeLng };
+let map;
+let mapElement = document.getElementById("map");
+if (mapElement && typeof google !== 'undefined' && google.maps) {
+    map = new google.maps.Map(mapElement, {
+        zoom: 13,
+        center: myLatlng,
+    });
+}
 let zonePolygon = null;
 let infoWindow = new google.maps.InfoWindow({
     content: "Click the map to get Lat/Lng!",
@@ -266,7 +272,7 @@ function initMap() {
 initMap();
 
 
-$(document).on('ready', function () {
+$(document).ready(function () {
     function updateZone(id) {
         let url = $('#choice_zones').data('zone-coordinates-url').replace('PLACEHOLDER_ID', id)
         $.get({
@@ -441,7 +447,7 @@ $(document).ready(function() {
         '#logoImageViewer ~ .upload-file__textbox'
     );
 });
-$(document).on('ready', function() {
+$(document).ready(function() {
    
     $(document).on('keyup', 'input[name="password"]', function() {
         const password = $(this).val();
