@@ -552,7 +552,7 @@ class UserService extends BaseService
             return ['status' => 'not_found'];
         }
 
-        if ($user->f_name) {
+        if ($user->f_name && ($data['login_type'] ?? '') !== 'manual') {
             return ['status' => 'already_exists'];
         }
 

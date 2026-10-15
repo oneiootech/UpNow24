@@ -21,31 +21,32 @@ class BannerController extends BaseApiController
 
     public function index(Request $request): JsonResponse
     {
-        $this->resolveCurrentModule($request);
-        $this->applyZoneIds($request);
-
-        $filters = $this->filters($request);
-
-        if (service_api_module_active()) {
-            return $this->bannerPayload(
-                $this->bannerService->getServiceModuleBanners($filters),
-                $this->bannerService->getServiceModuleCampaigns($filters)
-            );
-        }
-
-        if (! config('module.current_module_data') && addon_published_status('Service')) {
-            return $this->bannerPayload(
-                $this->bannerService->getAllModuleBanners($filters),
-                $this->bannerService->getAllModuleCampaigns($filters)
-            );
-        }
-
         try {
+            $this->resolveCurrentModule($request);
+            $this->applyZoneIds($request);
+
+            $filters = $this->filters($request);
+
+            if (service_api_module_active()) {
+                return $this->bannerPayload(
+                    $this->bannerService->getServiceModuleBanners($filters),
+                    $this->bannerService->getServiceModuleCampaigns($filters)
+                );
+            }
+
+            if (! config('module.current_module_data') && addon_published_status('Service')) {
+                return $this->bannerPayload(
+                    $this->bannerService->getAllModuleBanners($filters),
+                    $this->bannerService->getAllModuleCampaigns($filters)
+                );
+            }
+
             return $this->bannerPayload(
                 $this->bannerService->getZoneBanners($filters),
                 $this->bannerService->getRunningCampaigns($filters)
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Log::error('BannerController.index failed: ' . $e->getMessage());
             return $this->bannerPayload([], []);
         }
     }

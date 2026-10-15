@@ -318,6 +318,13 @@ class OrderNotifier
 
     private static function whatsappCustomerOrder($order, string $status): void
     {
-        WhatsAppOrderNotifier::notifyCustomerOrderStatus($order, $status);
+        $isNewOrder = (in_array($order->payment_method, ['cash_on_delivery', 'offline_payment']) && $order->order_status == 'pending')
+            || (! in_array($order->payment_method, ['cash_on_delivery', 'offline_payment']) && $order->order_status == 'confirmed');
+
+        // The Meta customer_order_template is designed as an Order Confirmed alert.
+        // It should ONLY trigger on initial new order confirmation, never on cancel/refund/delivered.
+        if ($isNewOrder) {
+            WhatsAppOrderNotifier::notifyCustomerOrderStatus($order, $status);
+        }
     }
 }

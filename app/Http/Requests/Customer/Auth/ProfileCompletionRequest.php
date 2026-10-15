@@ -3,18 +3,24 @@
 namespace App\Http\Requests\Customer\Auth;
 
 use App\Http\Requests\BaseRequest;
+use App\Models\User;
 
 class ProfileCompletionRequest extends BaseRequest
 {
     public function rules(): array
     {
         $loginType = $this->input('login_type');
+        $phone = $this->input('phone');
+        $user = $phone ? User::where('phone', $phone)->first() : auth('api')->user();
+        $userId = $user?->id;
 
         return [
             'name' => 'required',
             'login_type' => 'required|in:otp,social,manual',
             'phone' => $this->phoneRule('required', $loginType === 'social' ? 'users,phone' : null),
-            'email' => $this->emailRule('required', in_array($loginType, ['otp', 'manual']) ? 'users,email' : null),
+            'email' => $userId
+                ? 'required|email|unique:users,email,'.$userId
+                : $this->emailRule('required', in_array($loginType, ['otp', 'manual']) ? 'users,email' : null),
         ];
     }
 

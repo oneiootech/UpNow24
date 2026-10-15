@@ -33,12 +33,16 @@ class CustomerController extends Controller
         $builder_published = (bool) addon_published_status('Builder');
         $tab = $request->tab === 'storefront' && $builder_published ? 'storefront' : 'main';
 
-        $publishedStoreIds = $builder_published
-            ? TenantDomainConfig::where('website_visibility', true)->pluck('sub_tenant_id')->unique()->values()
-            : collect();
-        $storefronts = $builder_published
-            ? Store::whereIn('id', $publishedStoreIds)->select('id', 'name')->orderBy('name')->get()
-            : collect();
+        $publishedStoreIds = collect();
+        $storefronts = collect();
+        if ($builder_published) {
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasTable('tenant_domain_configs')) {
+                    $publishedStoreIds = TenantDomainConfig::where('website_visibility', true)->pluck('sub_tenant_id')->unique()->values();
+                    $storefronts = Store::whereIn('id', $publishedStoreIds)->select('id', 'name')->orderBy('name')->get();
+                }
+            } catch (\Throwable $e) {}
+        }
         $publishedStoreLookup = $storefronts->pluck('name', 'id')->all();
 
         $storefront_id = $request->storefront_id;
@@ -85,10 +89,18 @@ class CustomerController extends Controller
         })->withcount('orders')
         ->withSum('orders as total_order_amount', 'order_amount')
         ->when($tab === 'main', function ($query) {
-            $query->where('tenant_id', 0)->where('sub_tenant_id', 0);
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'tenant_id')) {
+                    $query->where('tenant_id', 0)->where('sub_tenant_id', 0);
+                }
+            } catch (\Throwable $e) {}
         })
         ->when($tab === 'storefront', function ($query) {
-            $query->where('sub_tenant_id', '>', 0);
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'sub_tenant_id')) {
+                    $query->where('sub_tenant_id', '>', 0);
+                }
+            } catch (\Throwable $e) {}
         })
         ->when($tab === 'storefront' && $storefront_id, function ($query) use ($storefront_id) {
             $query->where('sub_tenant_id', (int) $storefront_id);
@@ -628,10 +640,18 @@ class CustomerController extends Controller
         })->withcount('orders')
         ->withSum('orders as total_order_amount', 'order_amount')
         ->when($tab === 'main', function ($query) {
-            $query->where('tenant_id', 0)->where('sub_tenant_id', 0);
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'tenant_id')) {
+                    $query->where('tenant_id', 0)->where('sub_tenant_id', 0);
+                }
+            } catch (\Throwable $e) {}
         })
         ->when($tab === 'storefront', function ($query) {
-            $query->where('sub_tenant_id', '>', 0);
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'sub_tenant_id')) {
+                    $query->where('sub_tenant_id', '>', 0);
+                }
+            } catch (\Throwable $e) {}
         })
         ->when($tab === 'storefront' && $storefront_id, function ($query) use ($storefront_id) {
             $query->where('sub_tenant_id', (int) $storefront_id);

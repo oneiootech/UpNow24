@@ -55,11 +55,9 @@ class OtpController extends BaseApiController
         $user = $this->userService->findByPhone($data['phone']);
 
         if ($user && $data['login_type'] == 'manual') {
-            if ($user->is_phone_verified) {
-                return $this->alreadyVerified('phone');
+            if (! $user->is_phone_verified) {
+                $this->userService->markVerified($user, 'phone');
             }
-
-            $this->userService->markVerified($user, 'phone');
 
             return $this->session($this->sessionPayload($user, $data['login_type'], $data['guest_id']));
         }
@@ -90,11 +88,11 @@ class OtpController extends BaseApiController
     private function verifyManual(mixed $user, array $data): JsonResponse
     {
         if ($data['verification_type'] == 'phone' && $user->is_phone_verified) {
-            return $this->alreadyVerified('phone');
+            return $this->session($this->sessionPayload($user, $data['login_type'], $data['guest_id']));
         }
 
         if ($data['verification_type'] == 'email' && $user->is_email_verified) {
-            return $this->alreadyVerified('email');
+            return $this->session($this->sessionPayload($user, $data['login_type'], $data['guest_id']));
         }
 
         $identifier = $data['verification_type'] == 'email' ? $data['email'] : $data['phone'];
