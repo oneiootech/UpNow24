@@ -1368,7 +1368,7 @@ class ProviderController extends Controller
 
         $store = $this->store->findOrFail($id);
         $store->delivery_time = $request->minimum_pickup_time .'-'. $request->maximum_pickup_time.' '.$request->pickup_time_type;
-        $store->schedule_order = $request->boolean('schedule_order');
+        $store->schedule_order = $request->has('schedule_order') && $request->schedule_order ? 1 : 0;
         if ($store->store_business_model == 'commission') {
             $store->reviews_section = $request->boolean('reviews_section');
         }

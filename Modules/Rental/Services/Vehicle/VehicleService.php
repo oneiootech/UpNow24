@@ -301,8 +301,8 @@ class VehicleService extends BaseService
         }
 
         if (! Helpers::schedule_order()) {
-            $query->whereRaw('1 = 0');
-
+            // Allow if provider has schedule_order explicitly enabled even if global module setting is not toggled
+            $query->whereHas('provider', fn ($provider) => $provider->where('schedule_order', 1));
             return;
         }
 

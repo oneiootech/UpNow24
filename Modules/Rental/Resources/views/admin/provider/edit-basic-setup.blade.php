@@ -602,8 +602,9 @@
 
     <script src="{{ asset('public/assets/admin/js/spartan-multi-image-picker.js') }}"></script>
     <script
-        src="https://maps.googleapis.com/maps/api/js?key={{ \App\CentralLogics\Helpers::get_business_settings('map_api_key', false) }}&libraries=drawing,places&v=3.61">
+        src="https://maps.googleapis.com/maps/api/js?key={{ \App\CentralLogics\Helpers::get_business_settings('map_api_key', false) }}&libraries=drawing,places,marker,geometry&v=3.61&language={{ str_replace('_', '-', app()->getLocale()) }}&callback=initMap"
+        async defer>
     </script>
-    <script src="{{asset('Modules/Rental/public/assets/js/admin/view-pages/provider-edit.js')}}"></script>
+    <script src="{{asset('Modules/Rental/public/assets/js/admin/view-pages/provider-edit.js')}}?v={{time()}}"></script>
 
 @endpush

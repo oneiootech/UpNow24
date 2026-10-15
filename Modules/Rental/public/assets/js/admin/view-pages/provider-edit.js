@@ -199,143 +199,185 @@ function readURL(input, viewer) {
 }
 
 
-let storeLat = parseFloat($('#data-set').data('store-lat')) || parseFloat($('#data-set').data('lat')) || 23.757989;
-let storeLng = parseFloat($('#data-set').data('store-lng')) || parseFloat($('#data-set').data('lng')) || 90.360587;
-let myLatlng = { lat: storeLat, lng: storeLng };
-let map;
-let mapElement = document.getElementById("map");
-if (mapElement && typeof google !== 'undefined' && google.maps) {
+let map = null;
+let zonePolygon = null;
+let infoWindow = null;
+let bounds = null;
+let markers = [];
+
+function updateZone(id) {
+    if (!id) return;
+    let urlTemplate = $('#choice_zones').data('zone-coordinates-url');
+    if (!urlTemplate) return;
+    let url = urlTemplate.replace('PLACEHOLDER_ID', id);
+    $.get({
+        url: url,
+        dataType: 'json',
+        success: function (data) {
+            if (!map || typeof google === 'undefined' || !google.maps) return;
+            if (zonePolygon) {
+                zonePolygon.setMap(null);
+            }
+
+            zonePolygon = new google.maps.Polygon({
+                paths: data.coordinates,
+                strokeColor: "#FF0000",
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: 'white',
+                fillOpacity: 0,
+            });
+
+            zonePolygon.setMap(map);
+
+            let zoneBounds = new google.maps.LatLngBounds();
+            zonePolygon.getPaths().forEach(function(path) {
+                path.forEach(function(latlng) {
+                    zoneBounds.extend(latlng);
+                });
+            });
+
+            map.fitBounds(zoneBounds);
+
+            map.addListener('idle', function() {
+                const customZoom = 15;
+                if (map.getZoom() > customZoom) {
+                    map.setZoom(customZoom);
+                }
+            });
+
+            google.maps.event.addListener(zonePolygon, 'click', function (mapsMouseEvent) {
+                if (infoWindow) infoWindow.close();
+                let coords = mapsMouseEvent.latLng.toJSON();
+                infoWindow = new google.maps.InfoWindow({
+                    position: mapsMouseEvent.latLng,
+                    content: JSON.stringify(coords, null, 2),
+                });
+
+                let latEl = document.getElementById('latitude');
+                let lngEl = document.getElementById('longitude');
+                if (latEl) latEl.value = coords.lat;
+                if (lngEl) lngEl.value = coords.lng;
+                infoWindow.open(map);
+            });
+        },
+    });
+}
+
+function initMap() {
+    let mapElement = document.getElementById("map");
+    if (!mapElement) return;
+
+    if (typeof google === 'undefined' || !google.maps) {
+        console.warn("Google Maps API is not loaded yet.");
+        return;
+    }
+
+    let storeLat = parseFloat($('#data-set').data('store-lat')) || parseFloat($('#data-set').data('lat')) || 23.757989;
+    let storeLng = parseFloat($('#data-set').data('store-lng')) || parseFloat($('#data-set').data('lng')) || 90.360587;
+    let myLatlng = { lat: storeLat, lng: storeLng };
+
     map = new google.maps.Map(mapElement, {
         zoom: 13,
         center: myLatlng,
     });
-}
-let zonePolygon = null;
-let infoWindow = new google.maps.InfoWindow({
-    content: "Click the map to get Lat/Lng!",
-    position: myLatlng,
-});
-let bounds = new google.maps.LatLngBounds();
-function initMap() {
+
+    infoWindow = new google.maps.InfoWindow({
+        content: "Click the map to get Lat/Lng!",
+        position: myLatlng,
+    });
+
+    bounds = new google.maps.LatLngBounds();
+
     new google.maps.Marker({
-        position: { lat: $('#data-set').data('store-lat'), lng: $('#data-set').data('store-lng') },
-        map,
-        title: $('#data-set').data('store-name'),
+        position: myLatlng,
+        map: map,
+        title: $('#data-set').data('store-name') || '',
     });
+
     infoWindow.open(map);
+
     const input = document.getElementById("pac-input1");
-    const searchBox = new google.maps.places.SearchBox(input);
-    map.controls[google.maps.ControlPosition.TOP_CENTER].push(input);
-    let markers = [];
-    searchBox.addListener("places_changed", () => {
-        const places = searchBox.getPlaces();
-        if (places.length == 0) {
-            return;
-        }
-         markers.forEach((marker) => {
-            marker.setMap(null);
-        });
-        markers = [];
-         const bounds = new google.maps.LatLngBounds();
-        places.forEach((place) => {
-            document.getElementById('latitude').value = place.geometry.location.lat();
-            document.getElementById('longitude').value = place.geometry.location.lng();
-            if (!place.geometry || !place.geometry.location) {
-                console.log("Returned place contains no geometry");
-                return;
-            }
-            const icon = {
-                url: place.icon,
-                size: new google.maps.Size(71, 71),
-                origin: new google.maps.Point(0, 0),
-                anchor: new google.maps.Point(17, 34),
-                scaledSize: new google.maps.Size(25, 25),
-            };
-             markers.push(
-                new google.maps.Marker({
-                    map,
-                    icon,
-                    title: place.name,
-                    position: place.geometry.location,
-                })
-            );
+    if (input) {
+        const searchBox = new google.maps.places.SearchBox(input);
+        map.controls[google.maps.ControlPosition.TOP_CENTER].push(input);
 
-            if (place.geometry.viewport) {
-                 bounds.union(place.geometry.viewport);
-            } else {
-                bounds.extend(place.geometry.location);
-            }
-        });
-        map.fitBounds(bounds);
-    });
-}
-initMap();
+        searchBox.addListener("places_changed", () => {
+            const places = searchBox.getPlaces();
+            if (!places || places.length === 0) return;
 
+            markers.forEach((marker) => marker.setMap(null));
+            markers = [];
 
-$(document).ready(function () {
-    function updateZone(id) {
-        let url = $('#choice_zones').data('zone-coordinates-url').replace('PLACEHOLDER_ID', id)
-        $.get({
-            url: url,
-            dataType: 'json',
-            success: function (data) {
-                if (zonePolygon) {
-                    zonePolygon.setMap(null);
+            const placeBounds = new google.maps.LatLngBounds();
+            places.forEach((place) => {
+                if (!place.geometry || !place.geometry.location) return;
+
+                let latEl = document.getElementById('latitude');
+                let lngEl = document.getElementById('longitude');
+                if (latEl) latEl.value = place.geometry.location.lat();
+                if (lngEl) lngEl.value = place.geometry.location.lng();
+
+                const icon = {
+                    url: place.icon,
+                    size: new google.maps.Size(71, 71),
+                    origin: new google.maps.Point(0, 0),
+                    anchor: new google.maps.Point(17, 34),
+                    scaledSize: new google.maps.Size(25, 25),
+                };
+
+                markers.push(
+                    new google.maps.Marker({
+                        map: map,
+                        icon: icon,
+                        title: place.name,
+                        position: place.geometry.location,
+                    })
+                );
+
+                if (place.geometry.viewport) {
+                    placeBounds.union(place.geometry.viewport);
+                } else {
+                    placeBounds.extend(place.geometry.location);
                 }
-
-                zonePolygon = new google.maps.Polygon({
-                    paths: data.coordinates,
-                    strokeColor: "#FF0000",
-                    strokeOpacity: 0.8,
-                    strokeWeight: 2,
-                    fillColor: 'white',
-                    fillOpacity: 0,
-                });
-
-                zonePolygon.setMap(map);
-
-                let bounds = new google.maps.LatLngBounds();
-                zonePolygon.getPaths().forEach(function(path) {
-                    path.forEach(function(latlng) {
-                        bounds.extend(latlng);
-                    });
-                });
-
-                map.fitBounds(bounds);
-
-                map.addListener('idle', function() {
-                    const customZoom = 15;
-                    if (map.getZoom() > customZoom) {
-                        map.setZoom(customZoom);
-                    }
-                });
-
-                google.maps.event.addListener(zonePolygon, 'click', function (mapsMouseEvent) {
-                    infoWindow.close();
-                    infoWindow = new google.maps.InfoWindow({
-                        position: mapsMouseEvent.latLng,
-                        content: JSON.stringify(mapsMouseEvent.latLng.toJSON(), null, 2),
-                    });
-
-                    let coordinates = JSON.stringify(mapsMouseEvent.latLng.toJSON(), null, 2);
-                    coordinates = JSON.parse(coordinates);
-
-                    document.getElementById('latitude').value = coordinates['lat'];
-                    document.getElementById('longitude').value = coordinates['lng'];
-                    infoWindow.open(map);
-                });
-            },
+            });
+            map.fitBounds(placeBounds);
         });
     }
 
+    google.maps.event.addListener(map, 'click', function(mapsMouseEvent) {
+        if (infoWindow) infoWindow.close();
+        let coords = mapsMouseEvent.latLng.toJSON();
+        infoWindow = new google.maps.InfoWindow({
+            position: mapsMouseEvent.latLng,
+            content: JSON.stringify(coords, null, 2),
+        });
+
+        let latEl = document.getElementById('latitude');
+        let lngEl = document.getElementById('longitude');
+        if (latEl) latEl.value = coords.lat;
+        if (lngEl) lngEl.value = coords.lng;
+        infoWindow.open(map);
+    });
+
     let id = $('#choice_zones').val();
-    updateZone(id);
+    if (id) {
+        updateZone(id);
+    }
+}
+window.initMap = initMap;
+
+$(document).ready(function () {
+    if (typeof google !== 'undefined' && google.maps && !map) {
+        initMap();
+    }
 
     $('#choice_zones').on('change', function () {
         let newId = $(this).val();
         updateZone(newId);
     });
 });
+
 $("#vendor_form").on('keydown', function(e) {
     if (e.keyCode === 13) {
         e.preventDefault();
@@ -346,6 +388,7 @@ let initialSelectedZones = [];
 $(".basic-multiple-select2 option:selected").each(function () {
     initialSelectedZones.push($(this).val());
 });
+
 $('#reset_btn').click(function () {
     const defaultLogo = $('#data-set').data('store-logo');
     const defaultCoverPhoto = $('#data-set').data('store-cover-photo');
@@ -370,26 +413,27 @@ $('#reset_btn').click(function () {
     }
 
     $('#module_id').val(null).trigger('change');
-    zonePolygon.setMap(null);
+    if (zonePolygon) zonePolygon.setMap(null);
     $('#coordinates').val(null);
     $('#latitude').val(null);
     $('#longitude').val(null);
     $(".basic-multiple-select2").val(initialSelectedZones).trigger("change");
 });
+
 let zone_id = 0;
 $('#choice_zones').on('change', function() {
     if ($(this).val()) {
         zone_id = $(this).val();
     }
 });
+
 $('.delivery-time').on('click', function() {
     let min = $("#minimum_delivery_time").val();
     let max = $("#maximum_delivery_time").val();
     let type = $("#delivery_time_type").val();
     $("#floating--date").removeClass('active');
     $("#time_view").val(min + ' to ' + max + ' ' + type);
-
-})
+});
 
 $(document).ready(function() {
     function handleImageUpload(inputSelector, imgViewerSelector, textBoxSelector) {
@@ -447,8 +491,8 @@ $(document).ready(function() {
         '#logoImageViewer ~ .upload-file__textbox'
     );
 });
+
 $(document).ready(function() {
-   
     $(document).on('keyup', 'input[name="password"]', function() {
         const password = $(this).val();
         const feedback = $('#password-feedback');
@@ -463,7 +507,6 @@ $(document).ready(function() {
             feedback.text($('#data-set').data('password-valid'));
             feedback.removeClass('invalid').addClass('valid');
             feedback.removeClass('password-feedback');
-
         } else {
             feedback.text($('#data-set').data('password-invalid'));
             feedback.removeClass('valid').addClass('invalid');
@@ -486,5 +529,4 @@ $(document).ready(function() {
             feedback.removeClass('invalid-feedback');
         }
     });
-
 });

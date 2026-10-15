@@ -64,7 +64,7 @@
                                            data-text-on="<p>{{ translate('This will allow the vendor to take scheduled trips from customers.') }}</p>"
                                            data-text-off="<p>{{ translate('This will stop the vendor from taking scheduled trips from customers.') }}</p>"
                                            class="toggle-switch-input dynamic-checkbox-toggle"
-                                           name="schedule_order" id="schedule_order" value="1" {{$store->schedule_order?'checked':''}}>
+                                           name="schedule_order" id="schedule_order" value="1" {{($store->getRawOriginal('schedule_order') ?? $store->schedule_order)?'checked':''}}>
                                     <span class="toggle-switch-label">
                                         <span class="toggle-switch-indicator"></span>
                                     </span>

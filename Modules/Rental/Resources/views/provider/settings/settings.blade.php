@@ -77,7 +77,7 @@
                             </label>
                             <label class="toggle-switch toggle-switch-sm d-flex justify-content-between border border-secondary rounded px-4 form-control" for="schedule_order">
                                 <span class="pr-2">{{translate('Scheduled order')}}<span class="input-label-secondary" data-toggle="tooltip" data-placement="right" data-original-title="{{translate('When enabled, store owner can take scheduled orders from customers.')}}"><img src="{{asset('/public/assets/admin/img/info-circle.svg')}}" alt="{{translate('When enabled, store owner can take scheduled orders from customers.')}}"></span></span>
-                                <input type="checkbox" value="1" class="toggle-switch-input " name="schedule_order" id="schedule_order" {{$store->schedule_order?'checked':''}}>
+                                <input type="checkbox" value="1" class="toggle-switch-input " name="schedule_order" id="schedule_order" {{($store->getRawOriginal('schedule_order') ?? $store->schedule_order)?'checked':''}}>
                                 <span class="toggle-switch-label">
                                     <span class="toggle-switch-indicator"></span>
                                 </span>
