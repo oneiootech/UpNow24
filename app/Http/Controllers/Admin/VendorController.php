@@ -2152,9 +2152,9 @@ class VendorController extends Controller
         }
 
         $store->refresh();
-        $store->load('schedules');
+        $store->load(['schedules', 'module']);
 
-        if ($store->module?->module_type == 'rental' && view()->exists('rental::admin.provider.details.partials._schedule')) {
+        if (($store->module?->module_type == 'rental' || $store->module_type == 'rental') && view()->exists('rental::admin.provider.details.partials._schedule')) {
             $view = view('rental::admin.provider.details.partials._schedule', compact('store'))->render();
         } else {
             $view = view('admin-views.vendor.view.partials._schedule', compact('store'))->render();
@@ -2175,9 +2175,9 @@ class VendorController extends Controller
         $schedule->delete();
 
         $store->refresh();
-        $store->load('schedules');
+        $store->load(['schedules', 'module']);
 
-        if ($store->module?->module_type == 'rental' && view()->exists('rental::admin.provider.details.partials._schedule')) {
+        if (($store->module?->module_type == 'rental' || $store->module_type == 'rental') && view()->exists('rental::admin.provider.details.partials._schedule')) {
             $view = view('rental::admin.provider.details.partials._schedule', compact('store'))->render();
         } else {
             $view = view('admin-views.vendor.view.partials._schedule', compact('store'))->render();

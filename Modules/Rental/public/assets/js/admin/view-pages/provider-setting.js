@@ -121,10 +121,10 @@ $(document).on('click', '.delete-schedule', function () {
     })
 });
 
-$('#add-schedule').on('submit', function (e) {
+$(document).on('submit', '#add-schedule', function (e) {
     e.preventDefault();
     let dayVal = $(this).find('input[name=day]').val();
-    if (!dayVal && dayVal !== 0 && dayVal !== '0') {
+    if (dayVal === undefined || dayVal === null || dayVal === '') {
         toastr.error('Please select a valid day', {
             CloseButton: true,
             ProgressBar: true
