@@ -13,6 +13,7 @@
 @endphp
 
 <div class="tps-card">
+    <input type="hidden" name="module_id" value="{{ $banner?->module_id ?? Config::get('module.current_module_id') ?? session('current_module') }}">
     <div class="tps-card__body">
 
         <div class="tps-group">

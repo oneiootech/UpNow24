@@ -49,9 +49,13 @@ class BannerService extends BaseService
 
     public function getUpdateData(array $input, object $banner): array
     {
-        return $this->getBaseData($input, array_key_exists('image', $input)
-            ? FileStorage::update('banner/', $banner->image, ($input['image'] ?? null))
-            : $banner->image);
+        return $this->getBaseData(
+            $input,
+            array_key_exists('image', $input)
+                ? FileStorage::update('banner/', $banner->image, ($input['image'] ?? null))
+                : $banner->image,
+            $banner
+        );
     }
 
     public function getZoneBanners(array $filters = []): array
@@ -284,15 +288,20 @@ class BannerService extends BaseService
         return $this->toggleFlag($id, 'featured', $filters);
     }
 
-    private function getBaseData(array $input, mixed $image): array
+    private function getBaseData(array $input, mixed $image, ?object $banner = null): array
     {
+        $moduleId = $input['module_id'] ?? $banner?->module_id ?? Config::get('module.current_module_id') ?? session('current_module');
+        if (empty($moduleId)) {
+            $moduleId = \App\Models\Module::withoutGlobalScopes()->active()->first()?->id ?? 1;
+        }
+
         return [
             'title' => ($input['title'] ?? null)[array_search('default', ($input['lang'] ?? null))],
             'type' => ($input['banner_type'] ?? null),
             'zone_id' => ($input['zone_id'] ?? null),
             'image' => $image,
             'data' => (($input['banner_type'] ?? null) == 'store_wise') ? ($input['store_id'] ?? null) : ((($input['banner_type'] ?? null) == 'item_wise') ? ($input['item_id'] ?? null) : ''),
-            'module_id' => Config::get('module.current_module_id'),
+            'module_id' => $moduleId,
             'default_link' => ($input['default_link'] ?? null),
         ];
     }

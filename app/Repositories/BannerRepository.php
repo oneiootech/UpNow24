@@ -55,6 +55,9 @@ class BannerRepository implements BannerRepositoryInterface
     {
         $banner = $this->banner->find($id);
         foreach ($data as $key => $column) {
+            if ($key === 'module_id' && empty($column) && !empty($banner->module_id)) {
+                continue;
+            }
             $banner[$key] = $column;
         }
         $banner->save();

@@ -35,7 +35,8 @@
         </div>
         <div class="row g-3 mb-3">
             <div class="col-xl-8">
-                <form id="banner_form" class="custom-validation" data-ajax="true">
+                <form id="banner_form" action="{{ route('admin.banner.store') }}" method="post" enctype="multipart/form-data" class="custom-validation" data-ajax="true">
+                    @csrf
                     @include('admin-views.banner.partials._form', [
                         'banner' => null,
                         'isServiceModule' => $isServiceModule,
