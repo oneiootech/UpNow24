@@ -179,7 +179,13 @@ class AuthController extends BaseApiController
     {
         $user = $this->userService->findByPhone($data['phone']);
 
-        if ($user && ! $user->status) {
+        if (! $user) {
+            return $this->responseFormatter(config('response.unauthorized_401'), errors: [
+                ['code' => 'auth-001', 'message' => translate('messages.User Not Found!!!')],
+            ]);
+        }
+
+        if (! $user->status) {
             return $this->blockedAccount();
         }
 
