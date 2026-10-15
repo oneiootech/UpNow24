@@ -210,5 +210,15 @@
 @endsection
 
 @push('script_2')
-    <script src="{{asset('Modules/Rental/public/assets/js/admin/view-pages/provider-setting.js')}}"></script>
+    <script>
+        $(document).on('click', '.add--primary', function () {
+            let day_name = $(this).data('day');
+            let day_id = $(this).data('dayid');
+            let message = $('#exampleModal').data('message') || '{{translate('Create schedule for') }} ';
+            $('#exampleModal .modal-title').text(message + day_name);
+            $('#exampleModal input[name=day]').val(day_id);
+            $('#day_id_input').val(day_id);
+        });
+    </script>
+    <script src="{{asset('Modules/Rental/public/assets/js/admin/view-pages/provider-setting.js')}}?v={{time()}}"></script>
 @endpush

@@ -1,3 +1,12 @@
+
+$(document).on('click', '.add--primary', function () {
+    let day_name = $(this).data('day');
+    let day_id = $(this).data('dayid');
+    let title = $('#exampleModal').data('title') || 'Create schedule for ';
+    $('#exampleModal .modal-title').text(title + day_name);
+    $('#exampleModal input[name=day]').val(day_id);
+    $('#day_id_input').val(day_id);
+});
 "use strict";
 $(document).on('click', '.restaurant-open-status', function (event) {
     const route = $(this).data('route');

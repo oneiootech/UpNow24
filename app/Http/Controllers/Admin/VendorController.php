@@ -2151,8 +2151,17 @@ class VendorController extends Controller
             ]]);
         }
 
+        $store->refresh();
+        $store->load('schedules');
+
+        if ($store->module?->module_type == 'rental' && view()->exists('rental::admin.provider.details.partials._schedule')) {
+            $view = view('rental::admin.provider.details.partials._schedule', compact('store'))->render();
+        } else {
+            $view = view('admin-views.vendor.view.partials._schedule', compact('store'))->render();
+        }
+
         return response()->json([
-            'view' => view('admin-views.vendor.view.partials._schedule', compact('store'))->render(),
+            'view' => $view,
         ]);
     }
 
@@ -2165,8 +2174,17 @@ class VendorController extends Controller
         $store = $schedule->store;
         $schedule->delete();
 
+        $store->refresh();
+        $store->load('schedules');
+
+        if ($store->module?->module_type == 'rental' && view()->exists('rental::admin.provider.details.partials._schedule')) {
+            $view = view('rental::admin.provider.details.partials._schedule', compact('store'))->render();
+        } else {
+            $view = view('admin-views.vendor.view.partials._schedule', compact('store'))->render();
+        }
+
         return response()->json([
-            'view' => view('admin-views.vendor.view.partials._schedule', compact('store'))->render(),
+            'view' => $view,
         ]);
     }
 

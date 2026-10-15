@@ -1,50 +1,74 @@
 "use strict";
+
+$(document).on('click', '.add--primary', function () {
+    let day_name = $(this).data('day');
+    let day_id = $(this).data('dayid');
+    let message = $('#exampleModal').data('message') || 'Create schedule for ';
+    $('#exampleModal .modal-title').text(message + day_name);
+    $('#exampleModal input[name=day]').val(day_id);
+    $('#day_id_input').val(day_id);
+});
+
 $(document).ready(function () {
-    $('#dataTable').DataTable();
+    if ($('#dataTable').length) {
+        $('#dataTable').DataTable();
+    }
 
     $('#exampleModal').on('show.bs.modal', function (event) {
         let button = $(event.relatedTarget);
-        let day_name = button.data('day');
-        let day_id = button.data('dayid');
+        if (!button || !button.length) {
+            button = $(event.target);
+        }
+        let day_name = button.data('day') || button.closest('.add--primary').data('day');
+        let day_id = button.data('dayid') || button.closest('.add--primary').data('dayid');
         let modal = $(this);
-        let message = $(this).data('message');
-        modal.find('.modal-title').text(message + day_name);
-        modal.find('.modal-body input[name=day]').val(day_id);
-    })
-
-    let datatable = $.HSCore.components.HSDatatables.init($('#columnSearchDatatable'));
-
-    $('#column1_search').on('keyup', function () {
-        datatable
-            .columns(1)
-            .search(this.value)
-            .draw();
+        let message = $(this).data('message') || 'Create schedule for ';
+        if (day_name) {
+            modal.find('.modal-title').text(message + day_name);
+        }
+        if (day_id !== undefined && day_id !== '') {
+            modal.find('.modal-body input[name=day]').val(day_id);
+            $('#day_id_input').val(day_id);
+        }
     });
 
-    $('#column2_search').on('keyup', function () {
-        datatable
-            .columns(2)
-            .search(this.value)
-            .draw();
-    });
+    if ($('#columnSearchDatatable').length && $.HSCore && $.HSCore.components && $.HSCore.components.HSDatatables) {
+        let datatable = $.HSCore.components.HSDatatables.init($('#columnSearchDatatable'));
 
-    $('#column3_search').on('change', function () {
-        datatable
-            .columns(3)
-            .search(this.value)
-            .draw();
-    });
+        $('#column1_search').on('keyup', function () {
+            datatable
+                .columns(1)
+                .search(this.value)
+                .draw();
+        });
 
-    $('#column4_search').on('keyup', function () {
-        datatable
-            .columns(4)
-            .search(this.value)
-            .draw();
-    });
+        $('#column2_search').on('keyup', function () {
+            datatable
+                .columns(2)
+                .search(this.value)
+                .draw();
+        });
 
-    $('.js-select2-custom').each(function () {
-        let select2 = $.HSCore.components.HSSelect2.init($(this));
-    });
+        $('#column3_search').on('change', function () {
+            datatable
+                .columns(3)
+                .search(this.value)
+                .draw();
+        });
+
+        $('#column4_search').on('keyup', function () {
+            datatable
+                .columns(4)
+                .search(this.value)
+                .draw();
+        });
+    }
+
+    if ($('.js-select2-custom').length && $.HSCore && $.HSCore.components && $.HSCore.components.HSSelect2) {
+        $('.js-select2-custom').each(function () {
+            let select2 = $.HSCore.components.HSSelect2.init($(this));
+        });
+    }
 });
 
 
@@ -99,6 +123,14 @@ $(document).on('click', '.delete-schedule', function () {
 
 $('#add-schedule').on('submit', function (e) {
     e.preventDefault();
+    let dayVal = $(this).find('input[name=day]').val();
+    if (!dayVal && dayVal !== 0 && dayVal !== '0') {
+        toastr.error('Please select a valid day', {
+            CloseButton: true,
+            ProgressBar: true
+        });
+        return;
+    }
     let formData = new FormData(this);
     let route = $(this).data('route');
     $.ajaxSetup({
