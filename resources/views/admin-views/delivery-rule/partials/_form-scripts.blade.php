@@ -20,10 +20,118 @@
             $('.rule-method').removeClass('is-selected');
             $('.rule-method-input:checked').closest('.rule-method').addClass('is-selected');
             $('#method-hint').text(HINTS[method] || '');
+
+            if (method === @json(\App\Models\DeliveryRule::METHOD_DISTANCE)) {
+                syncDistanceSubmethod();
+            }
+        }
+
+        function activeDistanceSubmethod() {
+            return $('.distance-submethod-radio:checked').val() || @json(\App\Models\DeliveryRule::DISTANCE_METHOD_LEGACY);
+        }
+
+        function syncDistanceSubmethod() {
+            const submethod = activeDistanceSubmethod();
+            const isBaseExcess = submethod === @json(\App\Models\DeliveryRule::DISTANCE_METHOD_BASE_EXCESS);
+
+            $('.delivery-pricing-method-card').removeClass('is-selected');
+            $('.distance-submethod-radio:checked').closest('.delivery-pricing-method-card').addClass('is-selected');
+
+            $('#min_distance_wrapper').toggleClass('d-none', !isBaseExcess);
+
+            if (isBaseExcess) {
+                $('#preview_formula_display').text('Base Fee = Minimum Charge + MAX(0, Distance − Min Distance) × Per Unit Rate');
+            } else {
+                $('#preview_formula_display').text('Base Fee = MAX(Distance × Per Unit Rate, Minimum Delivery Charge)');
+            }
+
+            updateFeePreview();
+        }
+
+        function calculateFeeForPreview(dist, minCharge, perUnit, maxCap, submethod, minDist) {
+            let fee = 0;
+            let excess = 0;
+            let isCapped = false;
+            let isFloored = false;
+
+            if (submethod === @json(\App\Models\DeliveryRule::DISTANCE_METHOD_BASE_EXCESS)) {
+                minDist = Math.max(0, minDist || 0);
+                excess = Math.max(0, dist - minDist);
+                const raw = minCharge + (excess * perUnit);
+                fee = Math.max(raw, minCharge);
+            } else {
+                const raw = dist * perUnit;
+                fee = Math.max(raw, minCharge);
+            }
+
+            if (fee <= minCharge) {
+                isFloored = true;
+            }
+
+            if (maxCap > 0 && fee > maxCap) {
+                fee = Math.max(minCharge, maxCap);
+                isCapped = true;
+            }
+
+            return {
+                fee: fee,
+                excess: excess,
+                isCapped: isCapped,
+                isFloored: isFloored
+            };
+        }
+
+        function updateFeePreview() {
+            const submethod = activeDistanceSubmethod();
+            const minCharge = parseFloat($('#minimum_delivery_charge').val()) || 0;
+            const perUnit = parseFloat($('#per_km_charge').val()) || 0;
+            const maxCap = parseFloat($('#maximum_delivery_charge').val()) || 0;
+            const minDist = parseFloat($('#minimum_delivery_distance').val()) || 0;
+            const testDist = parseFloat($('#preview_test_distance').val()) || 0;
+            const unitLabel = @json($distanceUnitLabel);
+            const curr = @json($currencySymbol);
+
+            const res = calculateFeeForPreview(testDist, minCharge, perUnit, maxCap, submethod, minDist);
+
+            $('#preview_fee_result').text(curr + res.fee.toFixed(2));
+
+            if (submethod === @json(\App\Models\DeliveryRule::DISTANCE_METHOD_BASE_EXCESS)) {
+                $('#preview_fee_breakdown').text(
+                    'Base: ' + curr + minCharge.toFixed(2) +
+                    ' (covers first ' + minDist + ' ' + unitLabel + ') + Excess (' +
+                    res.excess.toFixed(2) + ' ' + unitLabel + ' × ' + curr + perUnit.toFixed(2) + ')'
+                );
+            } else {
+                $('#preview_fee_breakdown').text(
+                    'Distance (' + testDist + ' ' + unitLabel + ') × ' +
+                    curr + perUnit.toFixed(2) + ' = ' + curr + (testDist * perUnit).toFixed(2) +
+                    ' (Floor: ' + curr + minCharge.toFixed(2) + ')'
+                );
+            }
+
+            $('#preview_cap_badge').toggleClass('d-none', !res.isCapped);
+            $('#preview_floor_badge').toggleClass('d-none', !res.isFloored || res.isCapped);
+
+            // Matrix comparison row
+            [1, 3, 4, 5, 8, 20].forEach(function (d) {
+                const mRes = calculateFeeForPreview(d, minCharge, perUnit, maxCap, submethod, minDist);
+                $('#matrix_val_' + d).text(curr + mRes.fee.toFixed(2));
+            });
         }
 
         $(document).on('change', '.rule-method-input', syncPanes);
+        $(document).on('change', '.distance-submethod-radio', syncDistanceSubmethod);
+        $(document).on('input change', '#minimum_delivery_charge, #per_km_charge, #maximum_delivery_charge, #minimum_delivery_distance, #preview_test_distance', updateFeePreview);
+        $(document).on('click', '.rule-fee-sample-btn', function () {
+            $('.rule-fee-sample-btn').removeClass('is-active');
+            $(this).addClass('is-active');
+            $('#preview_test_distance').val($(this).data('dist'));
+            updateFeePreview();
+        });
+
         syncPanes();
+        syncDistanceSubmethod();
+
 
         // Everything _charge-table.blade.php needs to redraw a pane client-side.
         // Both shapes below must stay identical to that partial.
@@ -232,12 +340,23 @@
                 // Only the chosen method's own fields are required — a hidden pane must never
                 // block a save with a value the admin cannot see.
                 if (method === @json(\App\Models\DeliveryRule::METHOD_DISTANCE)) {
+                    const submethod = activeDistanceSubmethod();
+                    if (submethod === @json(\App\Models\DeliveryRule::DISTANCE_METHOD_BASE_EXCESS)) {
+                        const minDistVal = parseFloat($('#minimum_delivery_distance').val());
+                        if (isBlank($('#minimum_delivery_distance')) || isNaN(minDistVal) || minDistVal <= 0) {
+                            return { el: $('#minimum_delivery_distance'), message: @json(translate('Minimum delivery distance is required and must be greater than zero.')) };
+                        }
+                    }
                     if (isBlank($('#per_km_charge'))) { return { el: $('#per_km_charge'), message: REQUIRED.perUnit }; }
-                    // The maximum is OPTIONAL — blank means no upper limit, which is what the
-                    // request rule, the nullable column and DeliveryRuleService::distanceCharge()
-                    // all agree on. Requiring it here blocked the very save the server accepts.
+
+                    const minCharge = parseFloat($('#minimum_delivery_charge').val() || 0);
+                    const maxCharge = parseFloat($('#maximum_delivery_charge').val());
+                    if (!isNaN(maxCharge) && maxCharge > 0 && maxCharge < minCharge) {
+                        return { el: $('#maximum_delivery_charge'), message: @json(translate('Maximum delivery charge cannot be less than the minimum delivery charge.')) };
+                    }
                     return null;
                 }
+
                 if (method === @json(\App\Models\DeliveryRule::METHOD_FIXED)) {
                     return isBlank($('#fixed_charge')) ? { el: $('#fixed_charge'), message: REQUIRED.fixed } : null;
                 }

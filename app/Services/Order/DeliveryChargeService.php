@@ -140,7 +140,9 @@ class DeliveryChargeService extends BaseService
         // Step 2 — the base, floored at the minimum. This floor is what every post-engine
         // discount must respect; returning it is how M7 stays fixed.
         $flat = $rates['flat'] ?? null;
-        $base = $this->chargeableBase($distanceKm, $rates['per_unit'], $rates['minimum'], $flat);
+        $deliveryPricingMethod = $rates['delivery_pricing_method'] ?? DeliveryRule::DISTANCE_METHOD_LEGACY;
+        $minDeliveryDistance = $rates['minimum_delivery_distance'] ?? null;
+        $base = $this->chargeableBase($distanceKm, $rates['per_unit'], $rates['minimum'], $flat, $deliveryPricingMethod, $minDeliveryDistance);
 
         // Step 2d — the ADDITIVE parcel tiers, before the clamp, per the parcel brief's arithmetic:
         //
@@ -196,10 +198,20 @@ class DeliveryChargeService extends BaseService
     /**
      * Step 2 — distance x rate, floored at the minimum.
      *
+     * Supports both:
+     * - Legacy distance method: Base Fee = MAX(Distance × Per Unit Rate, Minimum Delivery Charge)
+     * - Base Distance + Excess Distance: Base Fee = Minimum Delivery Charge + MAX(0, Distance − Min Distance) × Per Unit Rate
+     *
      * Public because the parity suite exercises it directly against the legacy arithmetic.
      */
-    public function chargeableBase(float $distanceKm, float $perUnit, float $minimum, ?float $flat = null): float
-    {
+    public function chargeableBase(
+        float $distanceKm,
+        float $perUnit,
+        float $minimum,
+        ?float $flat = null,
+        ?string $pricingMethod = null,
+        ?float $minimumDistanceKm = null
+    ): float {
         // A flat base is an absolute amount for this order — an area's charge, a ZIP's charge, a
         // fixed rule amount — so the distance never multiplies it. The floor still applies.
         if ($flat !== null) {
@@ -211,12 +223,20 @@ class DeliveryChargeService extends BaseService
         // never converted. So the distance is converted into the rate's unit immediately before
         // they multiply, at money precision — rounding the operand at display precision would
         // move the fare.
-        $chargeable = app(DistanceService::class)->chargeable($distanceKm);
+        $distanceService = app(DistanceService::class);
+        $chargeable = $distanceService->chargeable($distanceKm);
 
-        $raw = $chargeable * $perUnit;
+        if ($pricingMethod === DeliveryRule::DISTANCE_METHOD_BASE_EXCESS && $minimumDistanceKm !== null && $minimumDistanceKm > 0) {
+            $chargeableMin = $distanceService->chargeable($minimumDistanceKm);
+            $excess = max(0.0, $chargeable - $chargeableMin);
+            $raw = $minimum + ($excess * $perUnit);
+        } else {
+            $raw = $chargeable * $perUnit;
+        }
 
         return max($raw, $minimum);
     }
+
 
     /**
      * Step 5 — cap the charge at the zone's maximum.
@@ -305,8 +325,11 @@ class DeliveryChargeService extends BaseService
                 'flat' => null,
                 'source' => self::SOURCE_DELIVERY_RULE,
                 'rule' => $rule,
+                'delivery_pricing_method' => $rule->delivery_pricing_method ?? DeliveryRule::DISTANCE_METHOD_LEGACY,
+                'minimum_delivery_distance' => $rule->minimum_delivery_distance !== null ? (float) $rule->minimum_delivery_distance : null,
             ];
         }
+
 
         // SECURITY (§5.4). A customer can post any area_id. Left unchecked they post the id of a
         // cheaper area in another zone and are charged its rate. Callers refuse such a pick with a

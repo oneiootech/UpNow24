@@ -180,6 +180,22 @@
                                     @elseif ($rule->pricing_method === \App\Models\DeliveryRule::METHOD_DISTANCE)
                                         <tr>
                                             <td class="rule-charge-table__sl">1</td>
+                                            <td>{{ translate('Delivery pricing method') }}</td>
+                                            <td>
+                                                <span class="badge badge-soft-{{ $isBaseExcess ? 'info' : 'secondary' }}">
+                                                    {{ $isBaseExcess ? translate('Base Distance + Excess Distance') : translate('Legacy Distance-Based') }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        @if ($isBaseExcess)
+                                            <tr>
+                                                <td class="rule-charge-table__sl">2</td>
+                                                <td>{{ translate('Minimum delivery distance') }} ({{ $distanceUnitLabel }})</td>
+                                                <td>{{ $minimumDeliveryDistance }} {{ $distanceUnitLabel }}</td>
+                                            </tr>
+                                        @endif
+                                        <tr>
+                                            <td class="rule-charge-table__sl">{{ $isBaseExcess ? 3 : 2 }}</td>
                                             {{-- The rate is entered and applied per configured distance
                                                  unit, so the label follows the setting instead of naming
                                                  kilometres outright - see the delivery rule service. --}}
@@ -188,10 +204,11 @@
                                             <td>{{ $perUnitCharge }}</td>
                                         </tr>
                                         <tr>
-                                            <td class="rule-charge-table__sl">2</td>
+                                            <td class="rule-charge-table__sl">{{ $isBaseExcess ? 4 : 3 }}</td>
                                             <td>{{ translate('messages.Maximum delivery charge') }}</td>
                                             <td>{{ $maximumCharge }}</td>
                                         </tr>
+
                                     @else
                                         <tr>
                                             <td class="rule-charge-table__sl">1</td>

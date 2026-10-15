@@ -57,6 +57,16 @@ class DeliveryRule extends Model
         self::METHOD_FIXED,
     ];
 
+    /** The two distance pricing methods. */
+    public const DISTANCE_METHOD_LEGACY = 'legacy_distance';
+
+    public const DISTANCE_METHOD_BASE_EXCESS = 'base_excess';
+
+    public const DISTANCE_PRICING_METHODS = [
+        self::DISTANCE_METHOD_LEGACY,
+        self::DISTANCE_METHOD_BASE_EXCESS,
+    ];
+
     /** The two methods that need the customer to pick something. */
     public const COVERAGE_METHODS = [
         self::METHOD_AREA,
@@ -69,6 +79,8 @@ class DeliveryRule extends Model
         'name',
         'minimum_delivery_charge',
         'pricing_method',
+        'delivery_pricing_method',
+        'minimum_delivery_distance',
         'per_km_charge',
         'maximum_delivery_charge',
         'fixed_charge',
@@ -84,6 +96,8 @@ class DeliveryRule extends Model
         'zone_id' => 'integer',
         'module_id' => 'integer',
         'minimum_delivery_charge' => 'float',
+        'delivery_pricing_method' => 'string',
+        'minimum_delivery_distance' => 'float',
         'per_km_charge' => 'float',
         'maximum_delivery_charge' => 'float',
         'fixed_charge' => 'float',
@@ -91,6 +105,13 @@ class DeliveryRule extends Model
         'weight_charge_status' => 'boolean',
         'dimension_charge_status' => 'boolean',
     ];
+
+    public function isBaseExcessPricing(): bool
+    {
+        return $this->pricing_method === self::METHOD_DISTANCE
+            && $this->delivery_pricing_method === self::DISTANCE_METHOD_BASE_EXCESS;
+    }
+
 
     /**
      * THE ONE-ACTIVE-RULE INVARIANT (§5.2).

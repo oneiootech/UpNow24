@@ -761,8 +761,20 @@ class DeliveryRuleService extends BaseService
 
     private function distanceCharge(DeliveryRule $rule, float $distanceKm): float
     {
-        $chargeable = app(DistanceService::class)->chargeable($distanceKm);
-        $raw = $chargeable * (float) ($rule->per_km_charge ?? 0);
+        $perKm = (float) ($rule->per_km_charge ?? 0);
+        $minimum = (float) ($rule->minimum_delivery_charge ?? 0);
+        $method = $rule->delivery_pricing_method ?? DeliveryRule::DISTANCE_METHOD_LEGACY;
+        $distanceService = app(DistanceService::class);
+
+        if ($method === DeliveryRule::DISTANCE_METHOD_BASE_EXCESS && ($rule->minimum_delivery_distance ?? 0) > 0) {
+            $chargeable = $distanceService->chargeable($distanceKm);
+            $chargeableMin = $distanceService->chargeable((float) $rule->minimum_delivery_distance);
+            $excess = max(0.0, $chargeable - $chargeableMin);
+            $raw = $minimum + ($excess * $perKm);
+        } else {
+            $chargeable = $distanceService->chargeable($distanceKm);
+            $raw = $chargeable * $perKm;
+        }
 
         $maximum = $rule->maximum_delivery_charge;
 
@@ -818,6 +830,13 @@ class DeliveryRuleService extends BaseService
     {
         $method = $data['pricing_method'] ?? DeliveryRule::METHOD_FIXED;
         $parcel = $this->connectsParcel($data);
+        $isDistance = $method === DeliveryRule::METHOD_DISTANCE;
+        $deliveryPricingMethod = $isDistance
+            ? ($data['delivery_pricing_method'] ?? DeliveryRule::DISTANCE_METHOD_LEGACY)
+            : null;
+        $minimumDeliveryDistance = ($isDistance && $deliveryPricingMethod === DeliveryRule::DISTANCE_METHOD_BASE_EXCESS)
+            ? $this->nullableFloat($data['minimum_delivery_distance'] ?? null)
+            : null;
 
         return [
             'zone_id' => $data['zone_id'],
@@ -828,11 +847,13 @@ class DeliveryRuleService extends BaseService
             'name' => $data['name'],
             'minimum_delivery_charge' => (float) ($data['minimum_delivery_charge'] ?? 0),
             'pricing_method' => $method,
+            'delivery_pricing_method' => $deliveryPricingMethod,
+            'minimum_delivery_distance' => $minimumDeliveryDistance,
             // Columns belonging to the methods NOT chosen are nulled rather than left stale, so a
             // rule switched from distance_wise to fixed_amount cannot keep quoting a per-km rate
             // that no screen shows any more.
-            'per_km_charge' => $method === DeliveryRule::METHOD_DISTANCE ? (float) ($data['per_km_charge'] ?? 0) : null,
-            'maximum_delivery_charge' => $method === DeliveryRule::METHOD_DISTANCE ? $this->nullableFloat($data['maximum_delivery_charge'] ?? null) : null,
+            'per_km_charge' => $isDistance ? (float) ($data['per_km_charge'] ?? 0) : null,
+            'maximum_delivery_charge' => $isDistance ? $this->nullableFloat($data['maximum_delivery_charge'] ?? null) : null,
             'fixed_charge' => $method === DeliveryRule::METHOD_FIXED ? (float) ($data['fixed_charge'] ?? 0) : null,
             // The wizard's two parcel steps. False whenever parcel is not connected, so
             // disconnecting the module cannot leave a rule quietly charging by weight.
@@ -840,6 +861,7 @@ class DeliveryRuleService extends BaseService
             'dimension_charge_status' => $parcel && ! empty($data['dimension_charge_status']),
         ];
     }
+
 
     private function nullableFloat(mixed $value): ?float
     {

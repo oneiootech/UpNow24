@@ -8701,4 +8701,12 @@
   'driver_not_found' => 'Driver not found',
   'Failed to delete driver' => 'Failed to delete driver',
   'Demo Module' => 'Demo Module',
+  'Service module doesn\'t support delivery charges. You can set up service bookings from' => 'Service module doesn\'t support delivery charges. You can set up service bookings from',
+  'Rental module doesn\'t support delivery charges. Its setup is available within the Rental module.' => 'Rental module doesn\'t support delivery charges. Its setup is available within the Rental module.',
+  'Minimum delivery distance is required when base distance pricing is selected' => 'Minimum delivery distance is required when base distance pricing is selected',
+  'Minimum delivery distance must be greater than zero' => 'Minimum delivery distance must be greater than zero',
+  'Minimum delivery distance' => 'Minimum delivery distance',
+  'Legacy Distance-Based' => 'Legacy Distance-Based',
+  'Currently You Dont Have Any Vehicles Category Setup' => 'Currently You Dont Have Any Vehicles Category Setup',
+  'A vehicle category sets the delivery range, weight and package sizes a delivery man can take, and routes orders to the right riders.' => 'A vehicle category sets the delivery range, weight and package sizes a delivery man can take, and routes orders to the right riders.',
 );

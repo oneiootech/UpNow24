@@ -47,6 +47,12 @@ class DeliveryRuleAddRequest extends FormRequest
             'minimum_delivery_charge' => 'required|numeric|min:0|max:99999999.99',
             'pricing_method' => ['required', Rule::in(DeliveryRule::PRICING_METHODS)],
 
+            'delivery_pricing_method' => $method === DeliveryRule::METHOD_DISTANCE
+                ? ['nullable', Rule::in(DeliveryRule::DISTANCE_PRICING_METHODS)]
+                : 'nullable',
+            'minimum_delivery_distance' => ($method === DeliveryRule::METHOD_DISTANCE && $this->input('delivery_pricing_method') === DeliveryRule::DISTANCE_METHOD_BASE_EXCESS)
+                ? 'required|numeric|gt:0|max:99999999.99'
+                : 'nullable|numeric|gt:0|max:99999999.99',
             'per_km_charge' => $method === DeliveryRule::METHOD_DISTANCE ? 'required|numeric|min:0|max:99999999.99' : 'nullable',
             'maximum_delivery_charge' => $method === DeliveryRule::METHOD_DISTANCE
                 ? 'nullable|numeric|min:0|max:99999999.99|gte:minimum_delivery_charge'
@@ -79,6 +85,8 @@ class DeliveryRuleAddRequest extends FormRequest
         return [
             'zone_id.required' => translate('messages.Please select a zone'),
             'module_id.required' => translate('messages.Please select a module'),
+            'minimum_delivery_distance.required' => translate('messages.Minimum delivery distance is required when base distance pricing is selected'),
+            'minimum_delivery_distance.gt' => translate('messages.Minimum delivery distance must be greater than zero'),
             'maximum_delivery_charge.gte' => translate('messages.Maximum delivery charge cannot be less than the minimum delivery charge'),
             'per_km_charge.required' => translate('messages.Per unit delivery charge is required for distance wise pricing'),
             'fixed_charge.required' => translate('messages.Fixed delivery charge is required for fixed amount pricing'),
@@ -95,9 +103,12 @@ class DeliveryRuleAddRequest extends FormRequest
     public function attributes(): array
     {
         return [
+            'delivery_pricing_method' => translate('Delivery pricing method'),
+            'minimum_delivery_distance' => translate('Minimum delivery distance'),
             'per_km_charge' => translate('Per unit delivery charge'),
             'minimum_delivery_charge' => translate('messages.Minimum Delivery Charge'),
             'maximum_delivery_charge' => translate('Maximum delivery charge'),
+
             'fixed_charge' => translate('Delivery charge'),
             // Wildcards, so a rejected row reads "The weight charge must be at least 0" rather
             // than "The weight charges.48 must be at least 0" — which named an internal id the
@@ -207,6 +218,8 @@ class DeliveryRuleAddRequest extends FormRequest
             'name' => $this->input('name'),
             'minimum_delivery_charge' => (float) $this->input('minimum_delivery_charge', 0),
             'pricing_method' => $this->input('pricing_method'),
+            'delivery_pricing_method' => $this->input('delivery_pricing_method', DeliveryRule::DISTANCE_METHOD_LEGACY),
+            'minimum_delivery_distance' => $this->input('minimum_delivery_distance'),
             'per_km_charge' => $this->input('per_km_charge'),
             'maximum_delivery_charge' => $this->input('maximum_delivery_charge'),
             'fixed_charge' => $this->input('fixed_charge'),
@@ -215,6 +228,7 @@ class DeliveryRuleAddRequest extends FormRequest
             'dimension_charge_status' => (bool) $this->input('dimension_charge_status'),
             'weight_charges' => (array) $this->input('weight_charges', []),
             'dimension_charges' => (array) $this->input('dimension_charges', []),
+
             // Deliberately ABSENT, so the service decides: the first rule a (zone, module) has
             // ever had is created active, a later one is not. It used to be hardcoded false here
             // on the reasoning that a rule "would quote before its charges were checked" — but

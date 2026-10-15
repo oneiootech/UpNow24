@@ -243,6 +243,10 @@ class DeliveryRuleController extends BaseController
             'isArea' => $rule->pricing_method === DeliveryRule::METHOD_AREA,
             'minimumCharge' => Helpers::format_currency($rule->minimum_delivery_charge),
             'perUnitCharge' => Helpers::format_currency($rule->per_km_charge),
+            'deliveryPricingMethod' => $rule->delivery_pricing_method ?? DeliveryRule::DISTANCE_METHOD_LEGACY,
+            'isBaseExcess' => ($rule->delivery_pricing_method ?? '') === DeliveryRule::DISTANCE_METHOD_BASE_EXCESS,
+            'minimumDeliveryDistance' => $rule->minimum_delivery_distance,
+            'formattedMinimumDeliveryDistance' => $rule->minimum_delivery_distance !== null ? app(DistanceService::class)->format($rule->minimum_delivery_distance) : null,
             // A missing OR zero maximum means NO CAP — DeliveryRuleService::distanceCharge()
             // only applies `min()` when the value is present and above zero. Printing it as
             // "0.00" told the admin the exact opposite: that every delivery was capped at
@@ -251,6 +255,7 @@ class DeliveryRuleController extends BaseController
                 ? Helpers::format_currency($rule->maximum_delivery_charge)
                 : translate('messages.No limit'),
             'fixedCharge' => Helpers::format_currency($rule->fixed_charge),
+
             'chargeRows' => $rule->charges
                 ->map(fn ($charge) => ['label' => $charge->label(), 'charge' => Helpers::format_currency($charge->charge)])
                 ->values(),
@@ -476,8 +481,11 @@ class DeliveryRuleController extends BaseController
             'selectedZoneId' => $selectedZoneId,
             'selectedModuleIds' => $selectedModuleIds,
             'selectedMethod' => $selectedMethod,
+            'selectedDeliveryPricingMethod' => old('delivery_pricing_method', $rule?->delivery_pricing_method ?? DeliveryRule::DISTANCE_METHOD_LEGACY),
+            'minimumDeliveryDistance' => old('minimum_delivery_distance', $rule?->minimum_delivery_distance ?? ''),
             'pricingMethods' => $this->pricingMethodCards(),
             'areaCharges' => $areaCharges,
+
             'zipCharges' => $zipCharges,
             // The per-zone seed the form script restores from when the admin returns to a zone.
             'chargeSeed' => $rule?->zone_id

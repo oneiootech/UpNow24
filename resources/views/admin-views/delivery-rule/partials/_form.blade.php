@@ -163,37 +163,166 @@
             <h5 class="surge-section__title">{{ translate('Distance wise charge setup') }}</h5>
             <p class="surge-section__subtitle">
                 {{ translate('messages.Charges scale with the delivery distance, bounded by the maximum.') }}</p>
-            <div class="row g-3">
-                <div class="col-md-6">
+
+            {{-- Delivery Pricing Method selector --}}
+            <div class="form-group mb-4">
+                <label class="input-label font-weight-bold">
+                    {{ translate('Delivery Pricing Method') }} <span class="text-danger">*</span>
+                    <span class="input-label-secondary" data-toggle="tooltip" data-placement="right"
+                        data-original-title="{{ translate('Choose between the legacy calculation and the new Base Distance + Excess Distance pricing model.') }}"><i
+                            class="tio-info"></i></span>
+                </label>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="delivery-pricing-method-card card p-3 border h-100 mb-0 {{ $selectedDeliveryPricingMethod === \App\Models\DeliveryRule::DISTANCE_METHOD_LEGACY ? 'is-selected' : '' }}" for="delivery_method_legacy">
+                            <div class="d-flex align-items-start gap-2">
+                                <input type="radio" id="delivery_method_legacy" name="delivery_pricing_method"
+                                    value="{{ \App\Models\DeliveryRule::DISTANCE_METHOD_LEGACY }}"
+                                    class="distance-submethod-radio mt-1 mr-2"
+                                    {{ $selectedDeliveryPricingMethod === \App\Models\DeliveryRule::DISTANCE_METHOD_LEGACY ? 'checked' : '' }}>
+                                <div>
+                                    <span class="d-block font-weight-bold text-dark mb-1">{{ translate('Legacy Distance-Based') }}</span>
+                                    <span class="d-block text-muted font-size-sm">{{ translate('Base Fee = MAX(Distance × Per Unit Rate, Minimum Delivery Charge)') }}</span>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="delivery-pricing-method-card card p-3 border h-100 mb-0 {{ $selectedDeliveryPricingMethod === \App\Models\DeliveryRule::DISTANCE_METHOD_BASE_EXCESS ? 'is-selected' : '' }}" for="delivery_method_base_excess">
+                            <div class="d-flex align-items-start gap-2">
+                                <input type="radio" id="delivery_method_base_excess" name="delivery_pricing_method"
+                                    value="{{ \App\Models\DeliveryRule::DISTANCE_METHOD_BASE_EXCESS }}"
+                                    class="distance-submethod-radio mt-1 mr-2"
+                                    {{ $selectedDeliveryPricingMethod === \App\Models\DeliveryRule::DISTANCE_METHOD_BASE_EXCESS ? 'checked' : '' }}>
+                                <div>
+                                    <span class="d-block font-weight-bold text-dark mb-1">{{ translate('Base Distance + Excess Distance') }}</span>
+                                    <span class="d-block text-muted font-size-sm">{{ translate('Base Fee = Minimum Delivery Charge + MAX(0, Distance − Min Distance) × Per Unit Rate') }}</span>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4 {{ $selectedDeliveryPricingMethod === \App\Models\DeliveryRule::DISTANCE_METHOD_BASE_EXCESS ? '' : 'd-none' }}" id="min_distance_wrapper">
+                    <label class="input-label" for="minimum_delivery_distance">
+                        {{ translate('Minimum delivery distance') }} ({{ $distanceUnitLabel }})
+                        <span class="text-danger">*</span>
+                        <span class="input-label-secondary" data-toggle="tooltip" data-placement="right"
+                            data-original-title="{{ translate('The distance included in the minimum delivery charge. Additional distance charges begin after this limit.') }}"><i
+                                class="tio-info"></i></span>
+                    </label>
+                    <input type="number" step="0.01" min="0.01" name="minimum_delivery_distance"
+                        id="minimum_delivery_distance" class="form-control h-45 fee-calc-trigger"
+                        placeholder="{{ translate('Ex') }}: 3"
+                        value="{{ $minimumDeliveryDistance }}">
+                </div>
+                <div class="col-md-4" id="per_km_charge_wrapper">
                     <label class="input-label" for="per_km_charge">
                         {{ translate('Per unit delivery charge') }} ({{ $currencySymbol }}/{{ $distanceUnitLabel }})
                         <span class="text-danger">*</span>
                         <span class="input-label-secondary" data-toggle="tooltip" data-placement="right"
-                            data-original-title="{{ translate('messages.The rate charged for each unit of distance travelled. The base charge is this rate multiplied by the delivery distance.') }}"><i
+                            data-original-title="{{ translate('The charge per additional kilometer beyond the included base distance when the new pricing method is enabled.') }}"><i
                                 class="tio-info"></i></span>
                     </label>
                     <input type="number" step="0.01" min="0" name="per_km_charge" id="per_km_charge"
-                        class="form-control h-45" placeholder="{{ translate('Ex') }}: 5"
+                        class="form-control h-45 fee-calc-trigger" placeholder="{{ translate('Ex') }}: 10"
                         value="{{ old('per_km_charge', $rule->per_km_charge ?? '') }}">
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4" id="max_charge_wrapper">
                     <label class="input-label" for="maximum_delivery_charge">
                         {{ translate('Maximum delivery charge') }}({{ $currencySymbol }})
-                        {{-- Optional, and the star that used to sit here said otherwise. The
-                             request rule is `nullable`, the column is nullable, and
-                             DeliveryRuleService::distanceCharge() treats a missing OR zero
-                             maximum as no cap at all. --}}
                         <span class="input-label-secondary" data-toggle="tooltip" data-placement="right"
-                            data-original-title="{{ translate('messages.The ceiling for the distance charge. Leave it blank for no upper limit.') }}"><i
+                            data-original-title="{{ translate('The optional maximum charge before surge pricing and free delivery adjustments.') }}"><i
                                 class="tio-info"></i></span>
                     </label>
                     <input type="number" step="0.01" min="0" name="maximum_delivery_charge"
-                        id="maximum_delivery_charge" class="form-control h-45"
-                        placeholder="{{ translate('Ex') }}: 5"
+                        id="maximum_delivery_charge" class="form-control h-45 fee-calc-trigger"
+                        placeholder="{{ translate('Ex') }}: 150"
                         value="{{ old('maximum_delivery_charge', $rule->maximum_delivery_charge ?? '') }}">
                 </div>
             </div>
+
+            {{-- Real-Time Delivery Fee Preview --}}
+            <div class="rule-fee-preview-card" id="distance_fee_preview_card">
+                <div class="rule-fee-preview-header">
+                    <div class="rule-fee-preview-title">
+                        <i class="tio-chart-bar-4"></i>
+                        <span>{{ translate('Real-Time Delivery Fee Preview') }}</span>
+                    </div>
+                    <div class="rule-fee-preview-formula" id="preview_formula_display">
+                        Base Fee = Minimum Charge + MAX(0, Distance − Min Distance) × Per Unit Rate
+                    </div>
+                </div>
+
+                <div class="row g-3 align-items-center mb-3">
+                    <div class="col-lg-5 col-md-6">
+                        <label class="input-label font-size-sm font-weight-bold mb-1" for="preview_test_distance">
+                            {{ translate('Test Distance') }} ({{ $distanceUnitLabel }})
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" step="0.1" min="0" id="preview_test_distance" class="form-control h-40" value="5">
+                            <div class="input-group-append">
+                                <span class="input-group-text">{{ $distanceUnitLabel }}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-1 mt-2">
+                            <span class="text-muted font-size-xs mr-1 align-self-center">{{ translate('Quick test') }}:</span>
+                            <button type="button" class="rule-fee-sample-btn" data-dist="1">1 {{ $distanceUnitLabel }}</button>
+                            <button type="button" class="rule-fee-sample-btn" data-dist="3">3 {{ $distanceUnitLabel }}</button>
+                            <button type="button" class="rule-fee-sample-btn" data-dist="4">4 {{ $distanceUnitLabel }}</button>
+                            <button type="button" class="rule-fee-sample-btn is-active" data-dist="5">5 {{ $distanceUnitLabel }}</button>
+                            <button type="button" class="rule-fee-sample-btn" data-dist="8">8 {{ $distanceUnitLabel }}</button>
+                            <button type="button" class="rule-fee-sample-btn" data-dist="20">20 {{ $distanceUnitLabel }}</button>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-7 col-md-6">
+                        <div class="rule-fee-preview-display d-flex align-items-center justify-content-between">
+                            <div>
+                                <span class="text-muted font-size-xs text-uppercase font-weight-bold d-block">{{ translate('Calculated Delivery Fee') }}</span>
+                                <span class="rule-fee-preview-amount" id="preview_fee_result">{{ $currencySymbol }}40.00</span>
+                                <div class="font-size-xs text-muted" id="preview_fee_breakdown">Base: {{ $currencySymbol }}20.00 + Excess (2 {{ $distanceUnitLabel }} × {{ $currencySymbol }}10.00)</div>
+                            </div>
+                            <div class="text-right">
+                                <span class="badge badge-soft-success font-size-xs d-none" id="preview_cap_badge">{{ translate('Max Cap Applied') }}</span>
+                                <span class="badge badge-soft-info font-size-xs d-none" id="preview_floor_badge">{{ translate('Min Floor Applied') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Quick comparison matrix --}}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm text-center mb-0 bg-white font-size-sm">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>{{ translate('Distance') }}</th>
+                                <th>1 {{ $distanceUnitLabel }}</th>
+                                <th>3 {{ $distanceUnitLabel }}</th>
+                                <th>4 {{ $distanceUnitLabel }}</th>
+                                <th>5 {{ $distanceUnitLabel }}</th>
+                                <th>8 {{ $distanceUnitLabel }}</th>
+                                <th>20 {{ $distanceUnitLabel }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="preview_matrix_row">
+                                <td class="font-weight-bold">{{ translate('Estimated Fee') }}</td>
+                                <td id="matrix_val_1">-</td>
+                                <td id="matrix_val_3">-</td>
+                                <td id="matrix_val_4">-</td>
+                                <td id="matrix_val_5">-</td>
+                                <td id="matrix_val_8">-</td>
+                                <td id="matrix_val_20">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
+
 
         {{-- Fixed amount --}}
         <div class="surge-section rule-pane d-none" data-pane="{{ \App\Models\DeliveryRule::METHOD_FIXED }}">
