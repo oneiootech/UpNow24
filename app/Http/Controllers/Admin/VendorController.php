@@ -2101,23 +2101,31 @@ class VendorController extends Controller
     public function add_schedule(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
+            'day' => 'required',
+            'start_time' => 'required',
+            'end_time' => 'required',
             'store_id' => 'required',
-        ], [
-            'end_time.after' => translate('messages.End time must be after the start time'),
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => Helpers::error_processor($validator)]);
         }
 
+        $startTime = date('H:i', strtotime($request->start_time));
+        $endTime = date('H:i', strtotime($request->end_time));
+
+        if (strtotime($endTime) <= strtotime($startTime)) {
+            return response()->json(['errors' => [
+                ['code' => 'end_time', 'message' => translate('messages.End time must be after the start time')],
+            ]]);
+        }
+
         $temp = StoreSchedule::where('day', $request->day)->where('store_id', $request->store_id)
-            ->where(function ($q) use ($request) {
-                return $q->where(function ($query) use ($request) {
-                    return $query->where('opening_time', '<=', $request->start_time)->where('closing_time', '>=', $request->start_time);
-                })->orWhere(function ($query) use ($request) {
-                    return $query->where('opening_time', '<=', $request->end_time)->where('closing_time', '>=', $request->end_time);
+            ->where(function ($q) use ($startTime, $endTime) {
+                return $q->where(function ($query) use ($startTime) {
+                    return $query->where('opening_time', '<=', $startTime)->where('closing_time', '>=', $startTime);
+                })->orWhere(function ($query) use ($endTime) {
+                    return $query->where('opening_time', '<=', $endTime)->where('closing_time', '>=', $endTime);
                 });
             })
             ->first();
@@ -2129,7 +2137,19 @@ class VendorController extends Controller
         }
 
         $store = Store::find($request->store_id);
-        $store_schedule = app(StoreService::class)->createSchedule($request->store_id, [$request->day], $request->start_time, $request->end_time.':59');
+        if (!$store) {
+            return response()->json(['errors' => [
+                ['code' => 'store', 'message' => translate('messages.Store not found')],
+            ]]);
+        }
+
+        $store_schedule = app(StoreService::class)->createSchedule($request->store_id, [$request->day], $startTime, $endTime.':59');
+
+        if ($store_schedule instanceof \Exception) {
+            return response()->json(['errors' => [
+                ['code' => 'schedule', 'message' => $store_schedule->getMessage()],
+            ]]);
+        }
 
         return response()->json([
             'view' => view('admin-views.vendor.view.partials._schedule', compact('store'))->render(),

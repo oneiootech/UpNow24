@@ -488,20 +488,34 @@
         "use strict";
         // Call the dataTables jQuery plugin
         $(document).ready(function () {
-            $('#dataTable').DataTable();
+            if ($('#dataTable').length) {
+                $('#dataTable').DataTable();
+            }
+
+            $(document).on('click', '.add--primary', function () {
+                let day_name = $(this).data('day');
+                let day_id = $(this).data('dayid');
+                $('#exampleModal .modal-title').text('{{translate('Create schedule for')}} ' + day_name);
+                $('#exampleModal input[name=day]').val(day_id);
+            });
 
             $('#exampleModal').on('show.bs.modal', function (event) {
                 let button = $(event.relatedTarget);
-                let day_name = button.data('day');
-                let day_id = button.data('dayid');
-                let modal = $(this);
-                modal.find('.modal-title').text('{{translate('Create schedule for')}}  ' + day_name);
-                modal.find('.modal-body input[name=day]').val(day_id);
-            })
+                if (button && button.length && button.data('dayid') !== undefined) {
+                    let day_name = button.data('day');
+                    let day_id = button.data('dayid');
+                    let modal = $(this);
+                    modal.find('.modal-title').text('{{translate('Create schedule for')}}  ' + day_name);
+                    modal.find('.modal-body input[name=day]').val(day_id);
+                }
+            });
 
             // INITIALIZATION OF DATATABLES
             // =======================================================
-            let datatable = $.HSCore.components.HSDatatables.init($('#columnSearchDatatable'));
+            let datatable;
+            if ($('#columnSearchDatatable').length) {
+                datatable = $.HSCore.components.HSDatatables.init($('#columnSearchDatatable'));
+            }
 
             $('#column1_search').on('keyup', function () {
                 datatable

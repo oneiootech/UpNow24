@@ -8709,4 +8709,5 @@
   'Legacy Distance-Based' => 'Legacy Distance-Based',
   'Currently You Dont Have Any Vehicles Category Setup' => 'Currently You Dont Have Any Vehicles Category Setup',
   'A vehicle category sets the delivery range, weight and package sizes a delivery man can take, and routes orders to the right riders.' => 'A vehicle category sets the delivery range, weight and package sizes a delivery man can take, and routes orders to the right riders.',
+  'User Not Found!!!' => 'User Not Found!!!',
 );
