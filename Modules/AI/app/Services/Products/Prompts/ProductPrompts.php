@@ -49,18 +49,17 @@ class ProductPrompts
         - Adapt the tone, phrasing, and examples to be natural for {$langCode} readers.
 
         Content & Structure:
-        - Include a section with key features as separate paragraphs with its ingredients.
-        - Focus on benefits, unique selling points, and appeal to the target audience.
+        - Must consist of 4 to 6 very short, punchy, and concise sentences.
+        - Strict length constraint: Total length MUST be between 80 and 120 characters in total (maximum 120 characters).
+        - Focus on key benefits, taste/quality, and appeal in brief words.
         - Use clear, compelling, and marketing-friendly language.
-        - Ensure the description is engaging and interesting.
         - Avoid any non-product-specific information.
-        - Must be in 300-600 characters.
-        - Keep it short and to the point, plain, simple and ready for listings.
+        - Keep it very short, crisp, plain, simple, and ready for listings.
 
         Formatting:
         - Output valid Product descriptions.
         - Do NOT include any markdown syntax, code fences, or triple backticks.
-        - Return only plain text in the paragraph (no HTML tags, no empty lines).
+        - Return only plain text in a single paragraph (no HTML tags, no line breaks).
 
 
         PROMPT;

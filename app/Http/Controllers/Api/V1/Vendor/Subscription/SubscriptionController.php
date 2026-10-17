@@ -60,7 +60,7 @@ class SubscriptionController extends BaseApiController
      */
     private function mayChoosePlanFor(BusinessPlanRequest $request, Store $store): bool
     {
-        if ($store->store_business_model === 'none') {
+        if ($store->store_business_model === 'none' || ($store->status == 0 && ($store->store_business_model === 'commission' || $request->input('business_plan') === 'commission'))) {
             return true;
         }
 
