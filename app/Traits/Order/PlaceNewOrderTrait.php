@@ -2217,11 +2217,30 @@ trait PlaceNewOrderTrait
     {
         $ids = is_array($ids) ? $ids : (json_decode((string) $ids, true) ?: []);
         // productPayload() hands back an array, the POS path a model: data_get reads either.
-        $offered = data_get($product, 'add_ons');
-        $offered = is_array($offered) ? $offered : (json_decode((string) $offered, true) ?: []);
-        $offered = array_map('strval', $offered);
+        $rawOffered = data_get($product, 'add_ons');
+        if ($rawOffered instanceof \Illuminate\Support\Collection) {
+            $rawOffered = $rawOffered->all();
+        } elseif (is_string($rawOffered)) {
+            $rawOffered = json_decode($rawOffered, true) ?: [];
+        } elseif (!is_array($rawOffered)) {
+            $rawOffered = [];
+        }
 
-        $keep = array_keys(array_filter($ids, fn ($id) => in_array((string) $id, $offered, true)));
+        $offered = [];
+        foreach ($rawOffered as $item) {
+            if (is_array($item) && isset($item['id'])) {
+                $offered[] = (string) $item['id'];
+            } elseif (is_object($item) && isset($item->id)) {
+                $offered[] = (string) $item->id;
+            } elseif (is_scalar($item)) {
+                $offered[] = (string) $item;
+            }
+        }
+
+        $keep = array_keys(array_filter($ids, function ($id) use ($offered) {
+            $val = is_array($id) ? ($id['id'] ?? null) : (is_object($id) ? ($id->id ?? null) : $id);
+            return $val !== null && in_array((string) $val, $offered, true);
+        }));
         if (count($keep) === count($ids)) {
             return [$ids, $qtys];
         }
