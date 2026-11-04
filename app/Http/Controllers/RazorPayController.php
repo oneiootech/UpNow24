@@ -29,11 +29,12 @@ class RazorPayController extends Controller
         $config = $this->paymentConfig('razor_pay', 'payment_config');
 
         if ($config && in_array($config->mode, ['live', 'test'])) {
-            $values = json_decode($config->{$config->mode . '_values'});
+            $rawValues = $config->{$config->mode . '_values'} ?? null;
+            $values = is_string($rawValues) ? json_decode($rawValues, true) : (array)$rawValues;
             if ($values) {
                 Config::set('razor_config', [
-                    'api_key' => $values->api_key,
-                    'api_secret' => $values->api_secret
+                    'api_key' => $values['api_key'] ?? ($values['api_key'] ?? null),
+                    'api_secret' => $values['api_secret'] ?? ($values['api_secret'] ?? null)
                 ]);
             }
         }

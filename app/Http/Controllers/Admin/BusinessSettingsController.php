@@ -738,7 +738,7 @@ class BusinessSettingsController extends Controller
         ];
 
         $settings = Setting::where('key_name', $request['gateway'])->where('settings_type', 'payment_config')->first();
-        $additional_data_image = $settings['additional_data'] != null ? json_decode($settings['additional_data']) : null;
+        $additional_data_image = !empty($settings?->additional_data) ? json_decode($settings->additional_data) : null;
         $validator_image_rule = 'required';
 
         if ($additional_data_image != null && isset($additional_data_image->gateway_image)) {
@@ -921,7 +921,7 @@ class BusinessSettingsController extends Controller
 
         $settings = Setting::where('key_name', $request['gateway'])->where('settings_type', 'payment_config')->first();
 
-        $additional_data_image = $settings['additional_data'] != null ? json_decode($settings['additional_data']) : null;
+        $additional_data_image = !empty($settings?->additional_data) ? json_decode($settings->additional_data) : null;
 
         if ($request->has('gateway_image')) {
             $gateway_image = $this->uploadFile('payment_modules/gateway_image/', 'png', $request['gateway_image'], $additional_data_image != null ? $additional_data_image->gateway_image : '');

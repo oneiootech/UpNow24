@@ -79,7 +79,7 @@ trait  ProcessorTrait
     }
     public static function getDisk()
     {
-        $config=\App\CentralLogics\app(BusinessSettingService::class)->value('local_storage');
+        $config = app(BusinessSettingService::class)->value('local_storage');
 
         return isset($config)?($config==0?'s3':'public'):'public';
     }

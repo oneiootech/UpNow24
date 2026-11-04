@@ -5,6 +5,8 @@
     <div class="razorpay-container">
         <h1 class="text-center">{{ "Please do not refresh this page..." }}</h1>
 
+        <div id="razorpay-error-box" style="display:none; color: #dc3545; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 12px 20px; border-radius: 6px; max-width: 90%; text-align: center; margin: 10px auto; font-size: 14px; font-weight: 500;"></div>
+
         <div class="razorpay-button-container">
             <button type="button" id="rzp-button1">Pay</button>
             <button type="button" class="razorpay-cancel-button" id="razorpay-cancel-button">Cancel</button>
@@ -16,12 +18,6 @@
         document.getElementById('razorpay-cancel-button').onclick = function () {
             window.location.href = '{{ route('razor-pay.cancel', ['payment_id' => $data->id]) }}';
         };
-        setTimeout(function () {
-            let payButton = document.getElementById("rzp-button1");
-            if (payButton) {
-                payButton.click();
-            }
-        }, 500);
     </script>
 @endsection
 
@@ -73,7 +69,20 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             let rzpButton = document.getElementById('rzp-button1');
+            let errorBox = document.getElementById('razorpay-error-box');
+
+            function showError(msg) {
+                if (errorBox) {
+                    errorBox.innerText = msg;
+                    errorBox.style.display = 'block';
+                }
+                console.error("Razorpay Error:", msg);
+            }
+
             if (rzpButton) {
+                rzpButton.innerText = "Initializing...";
+                rzpButton.disabled = true;
+
                 fetch("{{ route('razor-pay.create-order') }}", {
                     method: "POST",
                     headers: {
@@ -89,7 +98,12 @@
                 .then(response => response.json())
                 .then(orderData => {
                     if (!orderData.status || !orderData.order_id) {
-                        throw new Error(orderData.message || "Unable to initialize Razorpay checkout.");
+                        let err = orderData.message || "Unable to initialize Razorpay checkout.";
+                        showError(err);
+                        rzpButton.innerText = "Retry";
+                        rzpButton.disabled = false;
+                        rzpButton.onclick = function() { location.reload(); };
+                        return;
                     }
 
                     var options = {
@@ -132,16 +146,27 @@
                     };
                     var rzp1 = new Razorpay(options);
 
+                    rzpButton.innerText = "Pay";
+                    rzpButton.disabled = false;
+
                     rzpButton.onclick = function (e) {
                         rzp1.open();
                         e.preventDefault();
                     };
+
+                    // Auto-open razorpay popup
+                    try {
+                        rzp1.open();
+                    } catch (e) {
+                        console.error("Auto open failed:", e);
+                    }
                 })
                 .catch(error => {
-                    console.error("Error creating order:", error);
+                    showError(error.message || "Something went wrong connecting to payment gateway.");
+                    rzpButton.innerText = "Retry";
+                    rzpButton.disabled = false;
+                    rzpButton.onclick = function() { location.reload(); };
                 });
-            } else {
-                console.error("Button with ID 'rzp-button1' not found!");
             }
         });
     </script>

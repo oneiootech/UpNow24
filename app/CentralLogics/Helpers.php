@@ -1905,6 +1905,8 @@ class Helpers
 
     public static function get_full_url($path, $data, $type, $placeholder = null)
     {
+        $path = trim($path, '/');
+
         if ($data && $type === 's3') {
             try {
                 return Storage::disk('s3')->url($path.'/'.$data);

@@ -142,8 +142,9 @@ trait SmsGatewayTrait
                     CURLOPT_CUSTOMREQUEST => 'POST',
                     CURLOPT_POSTFIELDS => json_encode($payload),
                     CURLOPT_HTTPHEADER => $headers,
-                    CURLOPT_CONNECTTIMEOUT => self::smsConnectTimeout(),
-                    CURLOPT_TIMEOUT => self::smsTimeout(),
+                    CURLOPT_CONNECTTIMEOUT => 15,
+                    CURLOPT_TIMEOUT => 30,
+                    CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
                     CURLOPT_SSL_VERIFYPEER => config('notification.sms.verify_ssl', !app()->isLocal()),
                     CURLOPT_SSL_VERIFYHOST => config('notification.sms.verify_ssl', !app()->isLocal()) ? 2 : 0,
                 ]);
@@ -239,8 +240,9 @@ trait SmsGatewayTrait
                     CURLOPT_CUSTOMREQUEST => 'POST',
                     CURLOPT_POSTFIELDS => json_encode($payload),
                     CURLOPT_HTTPHEADER => $headers,
-                    CURLOPT_CONNECTTIMEOUT => self::smsConnectTimeout(),
-                    CURLOPT_TIMEOUT => self::smsTimeout(),
+                    CURLOPT_CONNECTTIMEOUT => 15,
+                    CURLOPT_TIMEOUT => 30,
+                    CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
                     CURLOPT_SSL_VERIFYPEER => config('notification.sms.verify_ssl', !app()->isLocal()),
                     CURLOPT_SSL_VERIFYHOST => config('notification.sms.verify_ssl', !app()->isLocal()) ? 2 : 0,
                 ]);
@@ -494,7 +496,7 @@ trait SmsGatewayTrait
 
     private static function smsConnectTimeout(): int
     {
-        return (int) config('notification.sms.connect_timeout', 5);
+        return (int) config('notification.sms.connect_timeout', 15);
     }
 
     private static function smsTimeout(): int

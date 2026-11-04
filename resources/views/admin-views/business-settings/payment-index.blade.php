@@ -229,7 +229,7 @@
                                                             'name' => 'gateway_image',
                                                             'ratio' => '3:1',
                                                             'isRequired' => true,
-                                                            'existingImage' => isset($additional_data->gateway_image) ? \App\CentralLogics\Helpers::get_full_url('payment_modules/gateway_image/', $additional_data->gateway_image, $additional_data->storage ?? 'public', 'upload_image') : null,
+                                                            'existingImage' => isset($additional_data->gateway_image) ? \App\CentralLogics\Helpers::get_full_url('payment_modules/gateway_image', $additional_data->gateway_image, $additional_data->storage ?? 'public', 'upload_image') : null,
                                                             'imageExtension' => IMAGE_EXTENSION,
                                                             'imageFormat' => IMAGE_FORMAT,
                                                             'maxSize' => MAX_FILE_SIZE,
