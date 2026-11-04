@@ -15,10 +15,13 @@ trait StoreListFiltersTrait
         $filter = $request->query('filter', '');
         $filter = $filter ? (is_array($filter) ? $filter : str_getcsv(trim($filter, '[]'), ',')) : '';
 
+        $lat = trim((string) $request->header('latitude'), '"\' ');
+        $lng = trim((string) $request->header('longitude'), '"\' ');
+
         return [
             'zone_id' => $request->header('zoneId'),
-            'longitude' => is_numeric($request->header('longitude')) ? (float) $request->header('longitude') : 0.0,
-            'latitude' => is_numeric($request->header('latitude')) ? (float) $request->header('latitude') : 0.0,
+            'longitude' => is_numeric($lng) ? (float) $lng : 0.0,
+            'latitude' => is_numeric($lat) ? (float) $lat : 0.0,
             'module_id' => $this->headerModuleId($request),
             'type' => $request->query('type', 'all'),
             'store_type' => $request->query('store_type', 'all'),

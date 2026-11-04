@@ -68,11 +68,14 @@ trait ItemListFiltersTrait
             $request->merge(['quick_action' => $request->query('store_type')]);
         }
 
+        $lat = trim((string) $request->header('latitude'), '"\' ');
+        $lng = trim((string) $request->header('longitude'), '"\' ');
+
         return [
             'module_id' => $this->headerModuleId($request),
             'zone_ids' => $this->zoneIds($request),
-            'longitude' => is_numeric($request->header('longitude')) ? (float) $request->header('longitude') : 0.0,
-            'latitude' => is_numeric($request->header('latitude')) ? (float) $request->header('latitude') : 0.0,
+            'longitude' => is_numeric($lng) ? (float) $lng : 0.0,
+            'latitude' => is_numeric($lat) ? (float) $lat : 0.0,
             'search' => $request->query('search'),
             'filter' => $this->storeFilterInputs($request),
         ];

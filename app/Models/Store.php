@@ -693,16 +693,16 @@ class Store extends Model
 
     public function scopeWithOpen($query, $longitude, $latitude): void
     {
-        $longitude = $longitude ? $longitude : 0;
-        $latitude = $latitude ? $latitude : 0;
+        $longitude = is_numeric(trim((string) $longitude, '"\' ')) ? (float) trim((string) $longitude, '"\' ') : 0.0;
+        $latitude = is_numeric(trim((string) $latitude, '"\' ')) ? (float) trim((string) $latitude, '"\' ') : 0.0;
 
         $query->selectRaw('*, IF(((select count(*) from `store_schedule` where `stores`.`id` = `store_schedule`.`store_id` and `store_schedule`.`day` = '.now()->dayOfWeek.' and `store_schedule`.`opening_time` < "'.now()->format('H:i:s').'" and `store_schedule`.`closing_time` >"'.now()->format('H:i:s').'") > 0), true, false) as open,ST_Distance_Sphere(point(longitude, latitude),point('.$longitude.', '.$latitude.')) as distance');
     }
 
     public function scopeWithOpenWithDeliveryTime($query, $longitude, $latitude): void
     {
-        $longitude = $longitude ? $longitude : 0;
-        $latitude = $latitude ? $latitude : 0;
+        $longitude = is_numeric(trim((string) $longitude, '"\' ')) ? (float) trim((string) $longitude, '"\' ') : 0.0;
+        $latitude = is_numeric(trim((string) $latitude, '"\' ')) ? (float) trim((string) $latitude, '"\' ') : 0.0;
 
         $query->selectRaw('*, IF(((select count(*) from `store_schedule` where `stores`.`id` = `store_schedule`.`store_id` and `store_schedule`.`day` = '.now()->dayOfWeek.' and `store_schedule`.`opening_time` < "'.now()->format('H:i:s').'" and `store_schedule`.`closing_time` >"'.now()->format('H:i:s').'") > 0), true, false) as open,ST_Distance_Sphere(point(longitude, latitude),point('.$longitude.', '.$latitude.')) as distance, CASE WHEN delivery_time IS NULL THEN 9999  WHEN delivery_time LIKE  "%hours%" THEN CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(delivery_time, "-", 1), " ", 1) AS UNSIGNED) * 60 WHEN delivery_time LIKE "%min%" OR delivery_time LIKE "%minute%" THEN CAST(SUBSTRING_INDEX(delivery_time, "-", 1) AS UNSIGNED) ELSE 9999 END AS min_delivery_time');
     }
