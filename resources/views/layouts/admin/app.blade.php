@@ -450,8 +450,9 @@ $countryCode = strtolower($country ? $country : 'auto');
                         <div class="max-349 mx-auto">
                             <div>
                                 <div class="text-center">
-                                    <img alt="" class="mb-4" id="deleteIcon"
-                                        src="{{asset('Modules/RideShare/public/assets/img/ride-share/safety-alert-shield-icon-red.png')}}">
+                                    <img alt="" class="mb-4" id="deleteIcon" loading="lazy"
+                                        src="{{asset('Modules/RideShare/public/assets/img/ride-share/safety-alert-shield-icon-red.png')}}"
+                                        onerror="this.src='{{ asset('public/assets/admin/img/warning.png') }}'">
                                     <h5 class="modal-title mb-3" id="safetyAlertNotificationTitle"></h5>
                                 </div>
                                 <div class="text-center mb-4 pb-2">

@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use App\CentralLogics\Helpers;
 use App\Models\OrderTransaction;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Route;
@@ -603,145 +604,146 @@ class DashboardController extends Controller
     public function dashboard_data($request)
     {
         $params = session('dash_params');
-        if (!url()->current() == $request->is('admin/users')) {
-            $data_os = self::order_stats_calc($params['zone_id'], $params['module_id']);
-            if(Route::currentRouteName() == 'admin.dispatch.dashboard'){
-                return $data_os;
+        $routeName = Route::currentRouteName() ?? 'admin.dashboard';
+        $cacheKey = 'admin_dash_' . $routeName . '_' . ($params['module_id'] ?? '0') . '_' . ($params['zone_id'] ?? 'all') . '_' . ($params['statistics_type'] ?? 'overall') . '_' . ($params['commission_overview'] ?? 'this_year') . '_' . ($params['user_overview'] ?? 'overall');
+
+        return Cache::remember($cacheKey, 60, function () use ($request, $params) {
+            $data_os = [];
+            $data_uo = [];
+            if (!url()->current() == $request->is('admin/users')) {
+                $data_os = self::order_stats_calc($params['zone_id'], $params['module_id']);
+                if(Route::currentRouteName() == 'admin.dispatch.dashboard'){
+                    return $data_os;
+                }
+                $data_uo = self::user_overview_calc($params['zone_id'], $params['module_id']);
             }
-            $data_uo = self::user_overview_calc($params['zone_id'], $params['module_id']);
-        }
 
-        // Ranked separately from $top_restaurants below (wishlist count vs. order count are
-        // different metrics), but the two rankings' top-6 lists overlap heavily in practice --
-        // popular stores tend to rank high on both. Each used to hydrate its own Store models
-        // (with the storage/translations/store_configs Store always eager-loads), so the shared
-        // stores got fetched twice. Only the ranking queries run here; the actual Store rows are
-        // hydrated once, together, after $top_restaurants below.
-        $wishlistCounts = Wishlist::whereHas('store')
-            ->when(is_numeric($params['module_id']), function ($q) use ($params) {
-                return $q->whereHas('store', function ($query) use ($params) {
-                    return $query->where('module_id', $params['module_id']);
-                });
-            })
-            ->when(is_numeric($params['zone_id']), function ($q) use ($params) {
-                return $q->whereHas('store', function ($query) use ($params) {
-                    return $query->where('zone_id', $params['zone_id']);
-                });
-            })
-            ->select('store_id', DB::raw('COUNT(store_id) as count'))->groupBy('store_id')
-            ->having("count", '>', 0)
-            ->orderBy('count', 'DESC')
-            ->limit(6)->get();
-        $top_sell = Item::withoutGlobalScope(ZoneScope::class)
-            ->select('id', 'name', 'image', 'order_count')
-            ->with('storage')
-            ->when(is_numeric($params['module_id']), function ($q) use ($params) {
-                return $q->where('items.module_id', $params['module_id']);
-            })
-            ->when(is_numeric($params['zone_id']), function ($q) use ($params) {
-                return $q->whereHas('store', function ($query) use ($params) {
-                    return $query->where('zone_id', $params['zone_id']);
-                });
-            })
-            ->having("order_count", '>', 0)
-            ->orderBy("order_count", 'desc')
-            ->take(6)
-            ->get();
-        $top_rated_foods = Item::withoutGlobalScope(ZoneScope::class)
-            ->select('id', 'name', 'image', 'rating_count')
-            ->with('storage')
-            ->when(is_numeric($params['module_id']), function ($q) use ($params) {
-                return $q->where('items.module_id', $params['module_id']);
-            })
-            ->when(is_numeric($params['zone_id']), function ($q) use ($params) {
-                return $q->whereHas('store', function ($query) use ($params) {
-                    return $query->where('zone_id', $params['zone_id']);
-                });
-            })
-            ->having("rating_count", '>', 0)
-            ->orderBy('rating_count', 'desc')
-            ->orderBy('id')
-            ->take(6)
-            ->get();
+            // Direct join instead of nested whereHas to prevent correlated subquery scans
+            $wishlistCounts = Wishlist::join('stores', 'stores.id', '=', 'wishlists.store_id')
+                ->when(is_numeric($params['module_id']), function ($q) use ($params) {
+                    return $q->where('stores.module_id', $params['module_id']);
+                })
+                ->when(is_numeric($params['zone_id']), function ($q) use ($params) {
+                    return $q->where('stores.zone_id', $params['zone_id']);
+                })
+                ->select('wishlists.store_id', DB::raw('COUNT(wishlists.store_id) as count'))
+                ->groupBy('wishlists.store_id')
+                ->having("count", '>', 0)
+                ->orderBy('count', 'DESC')
+                ->limit(6)->get();
 
-        $top_deliveryman = DeliveryMan::select('id', 'f_name', 'phone', 'image')->with('storage')->withCount('orders')->when(is_numeric($params['zone_id']), function ($q) use ($params) {
-            return $q->where('zone_id', $params['zone_id']);
-        })
-            ->Zonewise()
-            ->having("orders_count", '>', 0)
-            ->orderBy("orders_count", 'desc')
-            ->take(6)
-            ->get();
+            $top_sell = Item::withoutGlobalScope(ZoneScope::class)
+                ->select('id', 'name', 'image', 'order_count')
+                ->with('storage')
+                ->when(is_numeric($params['module_id']), function ($q) use ($params) {
+                    return $q->where('items.module_id', $params['module_id']);
+                })
+                ->when(is_numeric($params['zone_id']), function ($q) use ($params) {
+                    return $q->whereHas('store', function ($query) use ($params) {
+                        return $query->where('zone_id', $params['zone_id']);
+                    });
+                })
+                ->where("order_count", '>', 0)
+                ->orderBy("order_count", 'desc')
+                ->take(6)
+                ->get();
 
-        // Ranked from the orders side: withCount + having + orderByDesc ran a correlated
-        // COUNT per user and sorted all of them to return six rows (12.9s, 2.2M rows examined
-        // on 200k users), because HAVING on the counted alias cannot terminate early.
-        // Grouping orders is served by orders_status_guest_user_index.
-        // is_guest = 0 mirrors the User::orders() relation.
-        $topCustomerOrderCounts = DB::table('orders')
-            ->selectRaw('user_id, COUNT(*) AS order_count')
-            ->where('order_status', 'delivered')
-            ->where('is_guest', 0)
-            ->whereNotNull('user_id')
-            ->when(is_numeric($params['zone_id']), function ($query) use ($params) {
-                // Users in the zone, not orders in it: orders.zone_id is the store's zone.
-                return $query->whereIn('user_id', User::select('id')->where('zone_id', $params['zone_id']));
-            })
-            ->groupBy('user_id')
-            ->orderByDesc('order_count')
-            ->limit(6)
-            ->pluck('order_count', 'user_id');
+            $top_rated_foods = Item::withoutGlobalScope(ZoneScope::class)
+                ->select('id', 'name', 'image', 'rating_count')
+                ->with('storage')
+                ->when(is_numeric($params['module_id']), function ($q) use ($params) {
+                    return $q->where('items.module_id', $params['module_id']);
+                })
+                ->when(is_numeric($params['zone_id']), function ($q) use ($params) {
+                    return $q->whereHas('store', function ($query) use ($params) {
+                        return $query->where('zone_id', $params['zone_id']);
+                    });
+                })
+                ->where("rating_count", '>', 0)
+                ->orderBy('rating_count', 'desc')
+                ->orderBy('id')
+                ->take(6)
+                ->get();
 
-        $top_customers = User::select('id', 'f_name', 'phone', 'image')->with('storage')
-            ->whereIn('id', $topCustomerOrderCounts->keys())
-            ->get()
-            ->each(function ($customer) use ($topCustomerOrderCounts) {
-                $customer->order_count = (int) ($topCustomerOrderCounts[$customer->id] ?? 0);
-            })
-            ->sortByDesc('order_count')
-            ->values();
-
-        $topOrderStoreIds = Store::select('id', 'order_count')->whereHas('vendor', fn($query) => $query->where('status', 1))->when(is_numeric($params['module_id']), function ($q) use ($params) {
-            return $q->where('module_id', $params['module_id']);
-        })
-            ->when(is_numeric($params['zone_id']), function ($q) use ($params) {
+            $top_deliveryman = DeliveryMan::select('id', 'f_name', 'phone', 'image')->with('storage')->withCount('orders')->when(is_numeric($params['zone_id']), function ($q) use ($params) {
                 return $q->where('zone_id', $params['zone_id']);
             })
-            ->having("order_count", '>', 0)
-            ->orderBy("order_count", 'desc')
-            ->take(6)
-            ->pluck('id');
+                ->Zonewise()
+                ->having("orders_count", '>', 0)
+                ->orderBy("orders_count", 'desc')
+                ->take(6)
+                ->get();
 
-        // One shared fetch for whichever stores either ranking needs -- id/name/logo/order_count
-        // plus Store's own always-on storage/translations/store_configs eager loads, once, instead
-        // of once per ranking.
-        $rankedStoreIds = $wishlistCounts->pluck('store_id')->merge($topOrderStoreIds)->unique()->values();
-        $rankedStores = Store::select('id', 'name', 'logo', 'order_count')->with('storage')
-            ->whereIn('id', $rankedStoreIds)->get()->keyBy('id');
+            // Ranked from the orders side: withCount + having + orderByDesc ran a correlated
+            // COUNT per user and sorted all of them to return six rows (12.9s, 2.2M rows examined
+            // on 200k users), because HAVING on the counted alias cannot terminate early.
+            // Grouping orders is served by orders_status_guest_user_index.
+            // is_guest = 0 mirrors the User::orders() relation.
+            $topCustomerOrderCounts = DB::table('orders')
+                ->selectRaw('user_id, COUNT(*) AS order_count')
+                ->where('order_status', 'delivered')
+                ->where('is_guest', 0)
+                ->whereNotNull('user_id')
+                ->when(is_numeric($params['zone_id']), function ($query) use ($params) {
+                    // Users in the zone, not orders in it: orders.zone_id is the store's zone.
+                    return $query->whereIn('user_id', User::select('id')->where('zone_id', $params['zone_id']));
+                })
+                ->groupBy('user_id')
+                ->orderByDesc('order_count')
+                ->limit(6)
+                ->pluck('order_count', 'user_id');
 
-        $popular = $wishlistCounts
-            ->map(fn($row) => $row->setRelation('store', $rankedStores->get($row->store_id)))
-            ->filter(fn($row) => $row->store)
-            ->values();
+            $top_customers = User::select('id', 'f_name', 'phone', 'image')->with('storage')
+                ->whereIn('id', $topCustomerOrderCounts->keys())
+                ->get()
+                ->each(function ($customer) use ($topCustomerOrderCounts) {
+                    $customer->order_count = (int) ($topCustomerOrderCounts[$customer->id] ?? 0);
+                })
+                ->sortByDesc('order_count')
+                ->values();
 
-        $top_restaurants = $topOrderStoreIds
-            ->map(fn($id) => $rankedStores->get($id))
-            ->filter()
-            ->values();
+            $topOrderStoreIds = Store::select('id', 'order_count')->whereHas('vendor', fn($query) => $query->where('status', 1))->when(is_numeric($params['module_id']), function ($q) use ($params) {
+                return $q->where('module_id', $params['module_id']);
+            })
+                ->when(is_numeric($params['zone_id']), function ($q) use ($params) {
+                    return $q->where('zone_id', $params['zone_id']);
+                })
+                ->where("order_count", '>', 0)
+                ->orderBy("order_count", 'desc')
+                ->take(6)
+                ->pluck('id');
 
+            // One shared fetch for whichever stores either ranking needs -- id/name/logo/order_count
+            // plus Store's own always-on storage/translations/store_configs eager loads, once, instead
+            // of once per ranking.
+            $rankedStoreIds = $wishlistCounts->pluck('store_id')->merge($topOrderStoreIds)->unique()->values();
+            $rankedStores = Store::select('id', 'name', 'logo', 'order_count')->with('storage')
+                ->whereIn('id', $rankedStoreIds)->get()->keyBy('id');
 
-        if (!url()->current() == $request->is('admin/users')) {
-            $dash_data = array_merge($data_os, $data_uo);
-        }
+            $popular = $wishlistCounts
+                ->map(fn($row) => $row->setRelation('store', $rankedStores->get($row->store_id)))
+                ->filter(fn($row) => $row->store)
+                ->values();
 
-        $dash_data['popular'] = $popular;
-        $dash_data['top_sell'] = $top_sell;
-        $dash_data['top_rated_foods'] = $top_rated_foods;
-        $dash_data['top_deliveryman'] = $top_deliveryman;
-        $dash_data['top_restaurants'] = $top_restaurants;
-        $dash_data['top_customers'] = $top_customers;
+            $top_restaurants = $topOrderStoreIds
+                ->map(fn($id) => $rankedStores->get($id))
+                ->filter()
+                ->values();
 
-        return array_merge($dash_data, self::commission_chart_calc());
+            $dash_data = [];
+            if (!url()->current() == $request->is('admin/users')) {
+                $dash_data = array_merge($data_os, $data_uo);
+            }
+
+            $dash_data['popular'] = $popular;
+            $dash_data['top_sell'] = $top_sell;
+            $dash_data['top_rated_foods'] = $top_rated_foods;
+            $dash_data['top_deliveryman'] = $top_deliveryman;
+            $dash_data['top_restaurants'] = $top_restaurants;
+            $dash_data['top_customers'] = $top_customers;
+
+            return array_merge($dash_data, self::commission_chart_calc());
+        });
     }
 
     public function commission_chart_calc(): array
