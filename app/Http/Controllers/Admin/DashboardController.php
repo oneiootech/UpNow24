@@ -636,13 +636,11 @@ class DashboardController extends Controller
             ->select('id', 'name', 'image', 'order_count')
             ->with('storage')
             ->when(is_numeric($params['module_id']), function ($q) use ($params) {
-                return $q->whereHas('store', function ($query) use ($params) {
-                    return $query->where('module_id', $params['module_id']);
-                });
+                return $q->where('items.module_id', $params['module_id']);
             })
             ->when(is_numeric($params['zone_id']), function ($q) use ($params) {
                 return $q->whereHas('store', function ($query) use ($params) {
-                    return $query->where('module_id', $params['module_id'])->where('zone_id', $params['zone_id']);
+                    return $query->where('zone_id', $params['zone_id']);
                 });
             })
             ->having("order_count", '>', 0)
@@ -653,9 +651,7 @@ class DashboardController extends Controller
             ->select('id', 'name', 'image', 'rating_count')
             ->with('storage')
             ->when(is_numeric($params['module_id']), function ($q) use ($params) {
-                return $q->whereHas('store', function ($query) use ($params) {
-                    return $query->where('module_id', $params['module_id']);
-                });
+                return $q->where('items.module_id', $params['module_id']);
             })
             ->when(is_numeric($params['zone_id']), function ($q) use ($params) {
                 return $q->whereHas('store', function ($query) use ($params) {

@@ -1113,7 +1113,9 @@ if (in_array(config('module.current_module_type'), config('module.module_type'))
             startFCM();
             @endif
             @if(\App\CentralLogics\Helpers::module_permission_check('customer_management'))
-            conversationList();
+            if ($('#conversation-list').length > 0) {
+                conversationList();
+            }
             @endif
             if (getUrlParameter('conversation')) {
                 conversationView();
