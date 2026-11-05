@@ -42,7 +42,7 @@
     $url_module   = route('admin.dashboard') . '?module_id=' . $current_module_id;
 @endphp
 
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="{{asset('public/assets/admin/js/lucide.min.js')}}"></script>
 
 <script>
 (function () {

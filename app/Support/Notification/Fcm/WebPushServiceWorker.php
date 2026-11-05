@@ -21,6 +21,7 @@ class WebPushServiceWorker
         $measurementId     = self::js($config['measurementId'] ?? '');
 
         $filePath = base_path('firebase-messaging-sw.js');
+        $publicFilePath = public_path('firebase-messaging-sw.js');
 
         try {
             if (file_exists($filePath) && !is_writable($filePath)) {
@@ -93,6 +94,7 @@ class WebPushServiceWorker
             if (file_put_contents($filePath, $fileContent) === false) {
                 throw new \Exception('Failed to write to file: ' . $filePath);
             }
+            @file_put_contents($publicFilePath, $fileContent);
 
         } catch (\Throwable $exception) {
             Log::channel(NotificationConfig::logChannel())->error('web_push.service_worker_write_failed', [

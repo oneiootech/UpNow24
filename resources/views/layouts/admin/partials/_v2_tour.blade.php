@@ -6,8 +6,8 @@
     $tour_rideshare  = addon_published_status('RideShare');
 @endphp
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.css">
-<script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.1/dist/driver.js.iife.js"></script>
+<link rel="stylesheet" href="{{asset('public/assets/admin/css/driver.min.css')}}">
+<script src="{{asset('public/assets/admin/js/driver.min.js')}}"></script>
 
 <script>
 (function () {

@@ -363,7 +363,7 @@ $countryCode = strtolower($country ? $country : 'auto');
                             <span aria-hidden="true">&times;</span>
                         </button>
                         <div class="embed-responsive embed-responsive-16by9">
-                            <iframe class="embed-responsive-item" src="https://www.youtube.com/embed/0sus46BflpU"
+                            <iframe class="embed-responsive-item lazy-youtube" data-src="https://www.youtube.com/embed/0sus46BflpU"
                                 title="YouTube video player" frameborder="0"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                 allowfullscreen></iframe>
@@ -380,7 +380,7 @@ $countryCode = strtolower($country ? $country : 'auto');
                             <span aria-hidden="true">&times;</span>
                         </button>
                         <div class="embed-responsive embed-responsive-16by9">
-                            <iframe class="embed-responsive-item" src="https://www.youtube.com/embed/_BIHsClZtOE"
+                            <iframe class="embed-responsive-item lazy-youtube" data-src="https://www.youtube.com/embed/_BIHsClZtOE"
                                 title="YouTube video player" frameborder="0"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                 allowfullscreen></iframe>
@@ -628,8 +628,20 @@ if (in_array(config('module.current_module_type'), config('module.module_type'))
 
             @php $hasModules = \App\Models\Module::Active()->exists(); @endphp
 
+            $('#instruction-modal, #email-modal').on('show.bs.modal shown.bs.modal', function () {
+                let iframe = $(this).find('iframe.lazy-youtube');
+                if (iframe.length && !iframe.attr('src')) {
+                    iframe.attr('src', iframe.attr('data-src'));
+                }
+            });
+
             @if(!$hasModules)
-                $('#instruction-modal').show();
+                let $instModal = $('#instruction-modal');
+                let $iframe = $instModal.find('iframe.lazy-youtube');
+                if ($iframe.length && !$iframe.attr('src')) {
+                    $iframe.attr('src', $iframe.attr('data-src'));
+                }
+                $instModal.show();
             @endif
 
             $('.restart-Tour').on('click', function () {
