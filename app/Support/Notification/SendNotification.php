@@ -16,7 +16,24 @@ class SendNotification
 {
     public static function sendOrderNotifications($order): bool
     {
-        return OrderNotifier::notify($order);
+        if (app()->runningInConsole()) {
+            return OrderNotifier::notify($order);
+        }
+
+        // Defer notification delivery to after the HTTP response has been flushed to the client.
+        // This ensures endpoints like update-order-status return in < 50ms instead of 15-20s.
+        app()->terminating(function () use ($order) {
+            try {
+                OrderNotifier::notify($order);
+            } catch (\Throwable $e) {
+                Log::channel(NotificationConfig::logChannel())->error('order_notification.terminating_failed', [
+                    'order_id' => $order?->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        });
+
+        return true;
     }
 
     public static function sendToDevice(mixed $token, array $data, ?string $webPushLink = null): void

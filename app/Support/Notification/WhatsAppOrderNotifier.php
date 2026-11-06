@@ -196,8 +196,8 @@ class WhatsAppOrderNotifier
                 CURLOPT_CUSTOMREQUEST  => 'POST',
                 CURLOPT_POSTFIELDS     => json_encode($payload),
                 CURLOPT_HTTPHEADER     => $headers,
-                CURLOPT_CONNECTTIMEOUT => 5,
-                CURLOPT_TIMEOUT        => 20,
+                CURLOPT_CONNECTTIMEOUT => 3,
+                CURLOPT_TIMEOUT        => 5,
                 CURLOPT_SSL_VERIFYPEER => config('notification.sms.verify_ssl', !app()->isLocal()),
                 CURLOPT_SSL_VERIFYHOST => config('notification.sms.verify_ssl', !app()->isLocal()) ? 2 : 0,
             ]);
