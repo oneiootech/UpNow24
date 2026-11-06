@@ -1022,8 +1022,11 @@ if (!function_exists('config_settings')) {
          * which recognised `test` but not `demo`. Returns a STRING: a code is compared and stored
          * as text, and `rand()`'s int drops a leading zero the moment anything formats it.
          */
-        function generateOtpCode(): string
+        function generateOtpCode(int $length = 6): string
         {
+            if ($length === 4) {
+                return isStaticOtpMode() ? '1234' : (string) rand(1000, 9999);
+            }
             return isStaticOtpMode() ? STATIC_OTP_CODE : (string) rand(100000, 999999);
         }
     }
