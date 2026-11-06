@@ -97,8 +97,12 @@ class SendNotification
         return count($tokens);
     }
 
-    public static function pushToTopic(array $data, string $topic, string $type, ?string $webPushLink = null): void
+    public static function pushToTopic(array|object $data, string $topic, string $type, ?string $webPushLink = null): void
     {
+        if (! is_array($data)) {
+            $data = method_exists($data, 'toArray') ? $data->toArray() : (array) $data;
+        }
+
         $clickAction = $webPushLink ?: '';
 
         $hasOrder = isset($data['order_id']);
@@ -147,8 +151,12 @@ class SendNotification
         self::deliver($message, ['kind' => 'topic', 'topic' => $topic]);
     }
 
-    public static function pushSilentToTopic(array $data, string $topic, string $type): void
+    public static function pushSilentToTopic(array|object $data, string $topic, string $type): void
     {
+        if (! is_array($data)) {
+            $data = method_exists($data, 'toArray') ? $data->toArray() : (array) $data;
+        }
+
         $message = FcmMessage::toTopic($topic)
             ->dataOnly()
             ->data([

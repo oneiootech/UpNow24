@@ -58,12 +58,12 @@ class NotificationController extends BaseController
         $notification->image = $notification->image ? $notification->toArray()['image_full_url'] :'';
 
         try {
-            SendNotification::pushToTopic($notification, $topic, 'push_notification');
-        } catch (Exception) {
+            SendNotification::pushToTopic($notification->toArray(), $topic, 'push_notification');
+        } catch (\Throwable $e) {
             Toastr::warning(translate('messages.Push notification failed'));
         }
 
-        return response()->json();
+        return response()->json(['success' => true, 'message' => translate('messages.Notification sent successfully')]);
     }
 
     public function getUpdateView(string|int $id): RedirectResponse
@@ -81,8 +81,8 @@ class NotificationController extends BaseController
         $notification->image = $notification->image ? $notification->toArray()['image_full_url'] :'';
 
         try {
-            SendNotification::pushToTopic($notification, $topic, 'push_notification');
-        } catch (Exception) {
+            SendNotification::pushToTopic($notification->toArray(), $topic, 'push_notification');
+        } catch (\Throwable) {
             Toastr::warning(translate('messages.Push notification failed'));
         }
 

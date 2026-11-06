@@ -182,24 +182,38 @@
                     $("#loading").show();
                 },
                 success: function (data) {
-                    if (data.errors) {
+                    if (data && data.errors) {
                         $button.prop("disabled", false);
 
                         for (var i = 0; i < data.errors.length; i++) {
-                            toastr.error(data.errors[i].message, { CloseButton: true, ProgressBar: true });
+                            toastr.error(data.errors[i].message || data.errors[i], { CloseButton: true, ProgressBar: true });
                         }
 
                         return;
                     }
 
-                    toastr.success(config.successMessage, { CloseButton: true, ProgressBar: true });
+                    toastr.success(data && data.message ? data.message : config.successMessage, { CloseButton: true, ProgressBar: true });
 
                     setTimeout(function () {
-                        window.location.href = config.historyUrl;
-                    }, 2000);
+                        window.location.href = config.historyUrl || window.location.href;
+                    }, 1500);
                 },
-                error: function () {
+                error: function (xhr) {
                     $button.prop("disabled", false);
+                    var handled = false;
+                    if (xhr && xhr.responseJSON && xhr.responseJSON.errors) {
+                        var errs = xhr.responseJSON.errors;
+                        for (var j = 0; j < errs.length; j++) {
+                            toastr.error(errs[j].message || errs[j], { CloseButton: true, ProgressBar: true });
+                        }
+                        handled = true;
+                    } else if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                        toastr.error(xhr.responseJSON.message, { CloseButton: true, ProgressBar: true });
+                        handled = true;
+                    }
+                    if (!handled) {
+                        toastr.error("Failed to send notification. Please try again.", { CloseButton: true, ProgressBar: true });
+                    }
                 },
                 complete: function () {
                     $("#loading").hide();

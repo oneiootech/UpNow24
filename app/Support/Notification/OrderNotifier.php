@@ -277,7 +277,20 @@ class OrderNotifier
             SendNotification::pushToTopic($data, 'delivery_man_'.$order->zone_id.'_'.$order->dm_vehicle_id, 'order_request');
         }
 
-        SendNotification::pushToTopic($data, $order->zone->deliveryman_wise_topic, 'order_request');
+        // Broadcast to base deliveryman topic as well as _push topic (Flutter Rider app subscribes to zone_X_delivery_man_push)
+        if ($order->zone->deliveryman_wise_topic) {
+            SendNotification::pushToTopic($data, $order->zone->deliveryman_wise_topic, 'order_request');
+            SendNotification::pushToTopic($data, $order->zone->deliveryman_wise_topic.'_push', 'order_request');
+        } else {
+            SendNotification::pushToTopic($data, 'zone_'.$order->zone_id.'_delivery_man', 'order_request');
+            SendNotification::pushToTopic($data, 'zone_'.$order->zone_id.'_delivery_man_push', 'order_request');
+        }
+
+        // Also broadcast to ride-share riders in this zone
+        if (! empty($order->zone->rider_wise_topic)) {
+            SendNotification::pushToTopic($data, $order->zone->rider_wise_topic, 'order_request');
+        }
+        SendNotification::pushToTopic($data, 'zone_'.$order->zone_id.'_rider', 'order_request');
     }
 
     private static function newOrderAlert($order, mixed $orderType): array

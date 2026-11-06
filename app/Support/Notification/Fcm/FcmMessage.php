@@ -96,18 +96,29 @@ class FcmMessage
         }
 
         if ($this->withAndroid) {
+            $channel = $this->androidChannel ?? (string) config('notification.fcm.android_channel', '6ammart');
+            $sound = (string) config('notification.fcm.sound', 'notification.wav');
             $message['android'] = [
+                'priority' => 'HIGH',
                 'notification' => [
-                    'channelId' => $this->androidChannel ?? (string) config('notification.fcm.android_channel', '6ammart'),
+                    'channel_id' => $channel,
+                    'channelId' => $channel,
+                    'sound' => $sound,
+                    'default_sound' => true,
+                    'notification_priority' => 'PRIORITY_MAX',
                 ],
             ];
         }
 
         if ($this->withApns) {
             $message['apns'] = [
+                'headers' => [
+                    'apns-priority' => '10',
+                ],
                 'payload' => [
                     'aps' => [
                         'sound' => (string) config('notification.fcm.sound', 'notification.wav'),
+                        'content-available' => 1,
                     ],
                 ],
             ];
