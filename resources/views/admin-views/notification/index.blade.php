@@ -674,5 +674,5 @@
 
         window.notificationFormConfig = @json($notificationFormConfig);
     </script>
-    <script src="{{ asset('public/assets/admin') }}/js/view-pages/notification-form.js"></script>
+    <script src="{{ asset('public/assets/admin') }}/js/view-pages/notification-form.js?v={{ @filemtime(public_path('assets/admin/js/view-pages/notification-form.js')) }}"></script>
 @endpush

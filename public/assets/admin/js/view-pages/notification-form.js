@@ -142,10 +142,6 @@
         var $form = $(form);
         var $button = $form.find('button[type="submit"]');
 
-        if ($button.prop("disabled")) {
-            return false;
-        }
-
         Swal.fire({
             title: lang.confirmTitle,
             text: lang.confirmText + ": " + $.trim(selectedTarget().data("label") || ""),
@@ -162,22 +158,23 @@
             confirmButtonText: lang.send,
             reverseButtons: true
         }).then(function (result) {
-            if (!result.value) {
+            if (!result || (!result.value && !result.isConfirmed)) {
+                $button.prop("disabled", false);
                 return;
             }
 
             $button.prop("disabled", true);
 
-            $.ajaxSetup({
-                headers: { "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content") }
-            });
-
-            $.post({
+            $.ajax({
+                type: "POST",
                 url: config.submitUrl,
                 data: new FormData(form),
                 cache: false,
                 contentType: false,
                 processData: false,
+                headers: {
+                    "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
+                },
                 beforeSend: function () {
                     $("#loading").show();
                 },

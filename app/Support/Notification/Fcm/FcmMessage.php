@@ -101,7 +101,6 @@ class FcmMessage
             $message['android'] = [
                 'priority' => 'HIGH',
                 'notification' => [
-                    'channel_id' => $channel,
                     'channelId' => $channel,
                     'sound' => $sound,
                     'default_sound' => true,

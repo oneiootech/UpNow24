@@ -55,10 +55,17 @@ class NotificationController extends BaseController
     {
         $notification = $this->notificationRepo->add(data: $this->notificationService->getAddData($request->all()));
         $topic = $this->notificationService->getTopic($request->all());
-        $notification->image = $notification->image ? $notification->toArray()['image_full_url'] :'';
+
+        $data = [
+            'id' => $notification->id,
+            'title' => $notification->title,
+            'description' => $notification->description,
+            'image' => $notification->image ? $notification->image_full_url : '',
+            'zone_id' => $notification->zone_id,
+        ];
 
         try {
-            SendNotification::pushToTopic($notification->toArray(), $topic, 'push_notification');
+            SendNotification::pushToTopic($data, $topic, 'push_notification');
         } catch (\Throwable $e) {
             Toastr::warning(translate('messages.Push notification failed'));
         }
@@ -78,10 +85,17 @@ class NotificationController extends BaseController
 
         $topic = $this->notificationService->getTopic($request->all());
         $notification = $this->notificationRepo->getFirstWhere(params: ['id' => $id]);
-        $notification->image = $notification->image ? $notification->toArray()['image_full_url'] :'';
+
+        $data = [
+            'id' => $notification->id,
+            'title' => $notification->title,
+            'description' => $notification->description,
+            'image' => $notification->image ? $notification->image_full_url : '',
+            'zone_id' => $notification->zone_id,
+        ];
 
         try {
-            SendNotification::pushToTopic($notification->toArray(), $topic, 'push_notification');
+            SendNotification::pushToTopic($data, $topic, 'push_notification');
         } catch (\Throwable) {
             Toastr::warning(translate('messages.Push notification failed'));
         }
