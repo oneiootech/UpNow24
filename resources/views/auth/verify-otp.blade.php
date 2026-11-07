@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>{{translate('messages.login')}}</title>
 
-    <link rel="shortcut icon" href="{{asset('public/favicon.ico')}}">
+    <link rel="shortcut icon" href="{{asset('public/assets/admin/img/favicon.png')}}">
 
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{asset('public/assets/admin')}}/css/vendor.min.css">
